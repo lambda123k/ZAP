@@ -1,0 +1,1542 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Zap</title>
+<meta name="theme-color" content="#1F1B1B">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Zap">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@62..125,400..900&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=Martian+Mono:wght@400;600&display=swap">
+<style>
+/* Identité « télécommande & mire » : gris chaud d'écran éteint, rouge bouton power en signature, LED verte « allumé », chiffres de chaîne en mono, bande de mire comme seul ornement */
+:root{
+  --bg:#F3F1F0; --surface:#FFFFFF; --ink:#1B1717; --muted:#6E6663; --line:#E2DDDA;
+  --accent:#D7332A; --accent-ink:#FFFFFF; --soft:#FBE3E0; --good:#13875A; --bad:#B4344A;
+  --chip:#EFEBE9; --led:#22A35A; --onink:#CFC8C5; --remote:#1F1B1B;
+  --display:"Archivo", "Arial Narrow", "Helvetica Neue", Arial, sans-serif;
+  --body:"Atkinson Hyperlegible", "Helvetica Neue", Arial, sans-serif;
+  --mono:"Martian Mono", ui-monospace, Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141111; --surface:#1F1A1A; --ink:#F3EEEC; --muted:#A89F9B; --line:#342D2C;
+    --accent:#FF5A4E; --accent-ink:#1A0E0C; --soft:#3A1F1C; --good:#45C98E; --bad:#FF7C8C; --chip:#2A2322; --led:#3DD27A; --onink:#BDB4B0; --remote:#2B2524;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141111; --surface:#1F1A1A; --ink:#F3EEEC; --muted:#A89F9B; --line:#342D2C;
+  --accent:#FF5A4E; --accent-ink:#1A0E0C; --soft:#3A1F1C; --good:#45C98E; --bad:#FF7C8C; --chip:#2A2322; --led:#3DD27A; --onink:#BDB4B0; --remote:#2B2524;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--ink);font-family:var(--body);font-size:15px;line-height:1.5;padding:0 16px;padding-block:20px 48px}
+.wrap{max-width:1180px;margin:0 auto;display:flex;flex-direction:column;gap:22px}
+h1,h2,h3{font-family:var(--display);margin:0;text-wrap:balance;letter-spacing:-.01em}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.label{font-size:11.5px;text-transform:uppercase;letter-spacing:.09em;color:var(--muted);font-weight:600}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* header */
+header{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px}
+.brand h1{font-size:clamp(30px,5vw,46px);font-weight:800;line-height:1}
+.brand h1 span{color:var(--accent)}
+.brand p{margin:6px 0 0;color:var(--muted);max-width:52ch}
+.plats{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.plat{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:5px 12px 5px 9px;font-size:13px;font-weight:500}
+.plat .dot{width:9px;height:9px;border-radius:50%}
+.plat[aria-pressed="false"]{opacity:.45;background:transparent}
+.plat[aria-pressed="false"] .dot{background:var(--muted)!important}
+
+/* contexts */
+.ctxs{display:grid;grid-template-columns:repeat(auto-fill,minmax(132px,1fr));gap:8px}
+.ctx{text-align:left;border:1px solid var(--line);background:var(--surface);border-radius:12px;padding:11px 12px;display:flex;flex-direction:column;gap:2px;transition:border-color .15s, transform .15s}
+.ctx:hover{border-color:var(--accent)}
+.ctx b{font-family:var(--display);font-size:16px;font-weight:700}
+.ctx small{color:var(--muted);font-size:12px}
+.ctx[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.ctx[aria-pressed="true"] small{color:var(--bg);opacity:.75}
+
+.tune{display:flex;flex-wrap:wrap;gap:18px 28px;align-items:flex-end;padding:14px 16px;border:1px dashed var(--line);border-radius:12px}
+.tune .field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.range{display:flex;align-items:center;gap:10px}
+.range input{width:min(240px,60vw);accent-color:var(--accent)}
+.seg{display:inline-flex;border:1px solid var(--line);border-radius:10px;overflow:hidden;flex-wrap:wrap}
+.seg button{border:0;background:var(--surface);padding:6px 11px;font-size:13px;border-right:1px solid var(--line)}
+.seg button:last-child{border-right:0}
+.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);font-weight:600}
+
+/* main grid */
+.grid{display:grid;grid-template-columns:minmax(0,1.9fr) minmax(0,1fr);gap:22px;align-items:start}
+@media (max-width:860px){.grid{grid-template-columns:1fr}}
+
+.reshead{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:baseline;gap:8px}
+.reshead h2{font-size:24px;font-weight:700}
+.tip{background:var(--soft);border-radius:10px;padding:10px 13px;font-size:13.5px}
+.tip b{font-weight:600}
+.ghost{border:1px solid var(--line);background:transparent;border-radius:999px;padding:6px 13px;font-size:13px}
+.ghost:hover{border-color:var(--accent);color:var(--accent)}
+
+.list{display:flex;flex-direction:column;gap:10px}
+.card{display:grid;grid-template-columns:44px minmax(0,1fr);gap:4px 12px;background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 14px 12px}
+.card.top{border-color:var(--accent);box-shadow:0 1px 0 var(--accent)}
+.rank{font-family:var(--display);font-weight:800;font-size:26px;color:var(--muted);line-height:1.05}
+.card.top .rank{color:var(--accent)}
+.ctitle{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.ctitle h3{font-size:19px;font-weight:700}
+.meta{display:flex;flex-wrap:wrap;gap:4px 12px;color:var(--muted);font-size:13px;align-items:center}
+.pl{display:inline-flex;align-items:center;gap:6px;font-weight:600;color:var(--ink)}
+.pl .dot{width:8px;height:8px;border-radius:50%}
+.match{display:flex;align-items:center;gap:8px;margin-top:6px}
+.bar{flex:1;max-width:220px;height:6px;border-radius:6px;background:var(--chip);overflow:hidden}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:6px}
+.why{display:flex;flex-wrap:wrap;gap:5px;margin-top:8px}
+.why span{font-size:12.5px;padding:2px 9px;border-radius:999px;background:var(--chip)}
+.why span.pos::before{content:"+ ";color:var(--good);font-weight:700}
+.why span.neg::before{content:"– ";color:var(--bad);font-weight:700}
+.acts{grid-column:2;display:flex;flex-wrap:wrap;gap:6px;margin-top:10px}
+.acts button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:5px 11px;font-size:13px}
+.acts .watch{background:var(--accent);color:var(--accent-ink);border-color:var(--accent);font-weight:600}
+.acts .watch:hover{filter:brightness(1.08)}
+.acts .later:hover{border-color:var(--ink)}
+
+/* en cours */
+.now{display:flex;flex-direction:column;gap:8px}
+.now[hidden]{display:none!important}
+.wcard{background:var(--surface);border:1px solid var(--line);border-left:4px solid var(--accent);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.wtop{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px}
+.wtop h3{font-size:17px;font-weight:700}
+.live{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--accent);font-weight:600;text-transform:uppercase;letter-spacing:.08em}
+.live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--accent);animation:pulse 1.6s infinite}
+@keyframes pulse{50%{opacity:.25}}
+.btn{border:1px solid var(--line);background:transparent;border-radius:8px;padding:6px 12px;font-size:13px}
+.btn.primary{background:var(--ink);color:var(--bg);border-color:var(--ink);font-weight:600}
+.rate{display:flex;flex-direction:column;gap:8px}
+.stars{display:flex;gap:2px;align-items:center}
+.stars button{border:0;background:transparent;font-size:28px;line-height:1;padding:0 2px;color:var(--line)}
+.stars button.on{color:#F2A91E}
+.stars .hint{margin-left:10px;font-size:13px;color:var(--muted)}
+textarea{font:inherit;font-size:14px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:9px 11px;resize:vertical;min-height:64px;width:100%}
+.row{display:flex;flex-wrap:wrap;gap:6px}
+
+/* journal */
+.jsec{display:flex;flex-direction:column;gap:14px;border-top:2px solid var(--ink);padding-top:18px}
+.jtitle{display:flex;flex-wrap:wrap;align-items:baseline;justify-content:space-between;gap:8px}
+.jtitle h2{font-size:26px;font-weight:800}
+.jsum{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.4fr);gap:14px}
+@media (max-width:760px){.jsum{grid-template-columns:1fr}}
+.jbox{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:8px}
+.big{font-family:var(--display);font-size:34px;font-weight:800;line-height:1}
+.kpis{display:flex;flex-wrap:wrap;gap:10px 26px}
+.kpis div{display:flex;flex-direction:column;gap:2px}
+.dist{display:flex;flex-direction:column;gap:4px}
+.drow{display:grid;grid-template-columns:78px 1fr 28px;gap:8px;align-items:center;border:0;background:transparent;padding:3px 4px;border-radius:6px;text-align:left;font-size:13px}
+.drow:hover{background:var(--chip)}
+.drow[aria-pressed="true"]{background:var(--soft)}
+.drow .jstars{font-size:12px}
+.dbar{height:10px;background:var(--chip);border-radius:5px;overflow:hidden}
+.dbar i{display:block;height:100%;background:#F2A91E;border-radius:5px}
+.tools{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:flex-end}
+.tools .field{display:flex;flex-direction:column;gap:5px}
+.tools input[type=search],.tools select{font:inherit;font-size:13.5px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:6px 10px;min-width:0}
+.tools input[type=search]{width:min(240px,80vw)}
+.jgroup{display:flex;flex-direction:column;gap:8px}
+.jgh{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}
+.jgh h3{font-size:17px;font-weight:700}
+.jgh span{font-size:12.5px;color:var(--muted)}
+.jgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:10px}
+.jitem{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:4px}
+.jitem.fav{border-color:#F2A91E}
+.jlinks{display:flex;gap:12px;margin-top:4px}
+.jhead{display:flex;justify-content:space-between;gap:8px;align-items:baseline}
+.jhead b{font-weight:600}
+.jstars{color:#F2A91E;letter-spacing:1px;white-space:nowrap}
+.jstars span{color:var(--line)}
+.jmeta{font-size:12px;color:var(--muted)}
+.jcom{font-size:13.5px;font-style:italic;overflow-wrap:anywhere}
+.jdel{border:0;background:transparent;color:var(--muted);font-size:12px;padding:0;align-self:flex-start;text-decoration:underline}
+.empty{padding:22px;text-align:center;color:var(--muted);border:1px dashed var(--line);border-radius:14px}
+
+/* side */
+aside{display:flex;flex-direction:column;gap:16px}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.panel h2{font-size:18px;font-weight:700}
+.panel p{margin:0;color:var(--muted);font-size:13px}
+.genres{display:flex;flex-wrap:wrap;gap:6px}
+.g{border:1px solid var(--line);background:transparent;border-radius:999px;padding:4px 11px;font-size:13px}
+.g[data-st="1"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+.g[data-st="-1"]{text-decoration:line-through;color:var(--muted);border-style:dashed}
+.legend{font-size:12px;color:var(--muted)}
+.learn{display:flex;flex-direction:column;gap:6px}
+.lrow{display:grid;grid-template-columns:96px 1fr 36px;gap:8px;align-items:center;font-size:13px}
+.lbar{height:8px;background:var(--chip);border-radius:6px;position:relative;overflow:hidden}
+.lbar i{position:absolute;top:0;bottom:0;border-radius:6px}
+.lbar::after{content:"";position:absolute;left:50%;top:-2px;bottom:-2px;width:1px;background:var(--muted);opacity:.5}
+.insight{font-size:13.5px;border-left:3px solid var(--accent);padding-left:10px}
+.stats{display:flex;gap:14px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.stats b{color:var(--ink)}
+.confirm{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:13px}
+.confirm button{border:1px solid var(--bad);color:var(--bad);background:transparent;border-radius:8px;padding:4px 10px}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--ink);color:var(--bg);padding:9px 16px;border-radius:10px;font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .2s;max-width:calc(100% - 32px)}
+.toast.on{opacity:1}
+footer{color:var(--muted);font-size:12px}
+
+/* v4 */
+[hidden]{display:none!important}
+input[type=text],input[type=number],select.inp{font:inherit;font-size:14px;color:var(--ink);background:var(--surface);border:1px solid var(--line);border-radius:9px;padding:7px 10px;min-width:0}
+select,input{accent-color:var(--accent)}
+select:focus-visible,textarea:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.autoline{display:flex;flex-wrap:wrap;gap:8px 12px;align-items:center;font-size:13px;color:var(--muted)}
+.autoline b{color:var(--ink);font-weight:600}
+.switch{display:inline-flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:3px 11px 3px 4px;font-size:12.5px}
+.switch i{width:26px;height:16px;border-radius:9px;background:var(--chip);position:relative;transition:background .15s}
+.switch i::after{content:"";position:absolute;top:2px;left:2px;width:12px;height:12px;border-radius:50%;background:var(--muted);transition:transform .15s}
+.switch[aria-pressed="true"] i{background:var(--accent)}
+.switch[aria-pressed="true"] i::after{transform:translateX(10px);background:var(--accent-ink)}
+.tune .full{flex-basis:100%}
+.duopill{display:inline-flex;align-items:center;gap:6px}
+.badge{display:inline-block;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;padding:1px 7px;border-radius:5px;background:var(--accent);color:var(--accent-ink)}
+.badge.wish{background:var(--chip);color:var(--ink)}
+.acts a.open{border:1px solid var(--line);border-radius:8px;padding:5px 11px;font-size:13px;color:var(--ink);text-decoration:none}
+.acts a.open:hover{border-color:var(--ink)}
+.acts .wishb[aria-pressed="true"]{background:var(--chip);border-color:var(--ink);font-weight:600}
+
+/* épisodes */
+.ep{display:flex;flex-wrap:wrap;align-items:center;gap:8px 14px}
+.epnum{font-family:var(--display);font-weight:700;font-size:18px}
+.mini{border:1px solid var(--line);background:transparent;border-radius:7px;padding:2px 9px;font-size:13px}
+.fit{font-size:12.5px;font-weight:600;color:var(--good)}
+.fit.no{color:var(--muted);font-weight:500}
+.eptot{display:inline-flex;align-items:center;gap:6px;font-size:12.5px;color:var(--muted)}
+.eptot input{width:62px;padding:3px 6px;font-size:13px}
+.pbar{height:6px;background:var(--chip);border-radius:6px;overflow:hidden;width:100%;max-width:320px}
+.pbar i{display:block;height:100%;background:var(--accent)}
+
+/* programme */
+.prog{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.prog h3{font-size:17px;font-weight:700}
+.tl{display:flex;height:26px;border-radius:7px;overflow:hidden;background:var(--chip)}
+.tl span{display:flex;align-items:center;padding:0 7px;font-size:11.5px;font-weight:600;color:#fff;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border-right:2px solid var(--surface);min-width:0}
+.pitems{display:flex;flex-direction:column;gap:6px;margin:0;padding:0;list-style:none}
+.pitems li{display:grid;grid-template-columns:22px minmax(0,1fr) auto;gap:8px;align-items:center;font-size:14px}
+.pitems input{width:17px;height:17px;margin:0}
+.pitems .mono{font-size:12.5px;color:var(--muted)}
+.pitems li.done label{text-decoration:line-through;color:var(--muted)}
+
+/* vote */
+.vote{background:var(--surface);border:2px solid var(--ink);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.vote h3{font-size:20px;font-weight:800}
+.names{display:flex;flex-wrap:wrap;gap:6px}
+.names span{display:inline-flex;align-items:center;gap:6px;background:var(--chip);border-radius:999px;padding:3px 6px 3px 11px;font-size:13px}
+.names button{border:0;background:transparent;color:var(--muted);padding:0 4px}
+.vrow{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.vrow b{font-weight:600}
+.vrow button{border:1px solid var(--line);background:transparent;border-radius:8px;padding:5px 10px;font-size:13px}
+.vrow button[aria-pressed="true"].ok{background:var(--good);border-color:var(--good);color:#fff}
+.vrow button[aria-pressed="true"].fv{background:#F2A91E;border-color:#F2A91E;color:#1A1830}
+.vres{display:grid;grid-template-columns:minmax(0,1fr) 120px 34px;gap:10px;align-items:center;font-size:14px}
+.vres.win b{color:var(--accent)}
+
+/* ajout */
+.addf{background:var(--surface);border:2px solid var(--accent);border-radius:14px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.addf h3{font-size:19px;font-weight:800}
+.fgrid{display:flex;flex-wrap:wrap;gap:12px 16px;align-items:flex-end}
+.fgrid .field{display:flex;flex-direction:column;gap:5px;min-width:0}
+.ck{display:flex;flex-wrap:wrap;gap:5px}
+.ck button{border:1px solid var(--line);background:transparent;border-radius:999px;padding:3px 10px;font-size:12.5px}
+.ck button[aria-pressed="true"]{background:var(--ink);color:var(--bg);border-color:var(--ink)}
+
+/* à voir */
+.wlist{display:flex;flex-direction:column;gap:0}
+.witem{display:flex;flex-direction:column;gap:3px;padding:9px 0;border-top:1px solid var(--line)}
+.witem:first-child{border-top:0;padding-top:0}
+.witem .row button{padding:3px 9px;font-size:12.5px}
+
+/* bilan */
+.bilan{background:var(--ink);color:var(--bg);border-radius:14px;padding:18px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:16px}
+@media (max-width:760px){.bilan{grid-template-columns:1fr}}
+.bilan .label{color:var(--bg);opacity:.7}
+.bilan h3{font-size:24px;font-weight:800}
+.bilan select{font:inherit;font-size:13px;background:transparent;color:var(--bg);border:1px solid color-mix(in srgb,var(--bg) 40%,transparent);border-radius:8px;padding:4px 8px}
+.bilan select option{color:#1A1830;background:#fff}
+.bk{display:flex;flex-wrap:wrap;gap:12px 26px}
+.bk div{display:flex;flex-direction:column}
+.bk .big{color:var(--bg)}
+.bk small{opacity:.7;font-size:12px}
+.btop{margin:0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+.btop li{display:grid;grid-template-columns:26px minmax(0,1fr) auto;gap:8px;align-items:baseline}
+.btop .r{font-family:var(--display);font-weight:800;color:var(--accent)}
+.bline{font-size:13.5px}
+.bline b{color:var(--accent)}
+
+/* v5 : onglets */
+.ctxs{grid-template-columns:repeat(auto-fill,minmax(100px,1fr))}
+.wrap{gap:16px}
+.apphead{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;position:sticky;top:env(safe-area-inset-top,0px);background:var(--bg);z-index:10;padding-block:8px}
+.logo{font-size:30px;font-weight:800;line-height:1}
+.logo span{color:var(--accent)}
+.tabs{display:flex;gap:4px;background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:4px}
+.tabs button{display:inline-flex;align-items:center;gap:7px;border:0;background:transparent;border-radius:9px;padding:7px 13px;font-size:14px;font-weight:500;color:var(--muted);position:relative}
+.tabs button:hover{color:var(--ink)}
+.tabs svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linejoin:round;stroke-linecap:round;flex:none}
+.tabs button[aria-selected="true"]{background:var(--ink);color:var(--bg)}
+.count{font-size:11px;background:var(--accent);color:var(--accent-ink);border-radius:999px;padding:0 6px;min-width:18px;text-align:center;line-height:17px}
+.panelTab{display:flex;flex-direction:column;gap:14px}
+#p-journal{border-top:0;padding-top:0}
+.twocol{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;align-items:start}
+.col{display:flex;flex-direction:column;gap:14px;min-width:0}
+.sechead{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.sechead h2{font-size:22px;font-weight:800}
+.tuneBox{border:1px dashed var(--line);border-radius:12px}
+.tuneBox summary{display:flex;gap:6px 12px;align-items:center;flex-wrap:wrap;padding:10px 14px;cursor:pointer;list-style:none;font-size:13.5px}
+.tuneBox summary::-webkit-details-marker{display:none}
+.tuneBox summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px;border-radius:12px}
+.chev{margin-left:auto;font-size:13px;color:var(--accent);font-weight:600}
+.tuneBox .tune{border:0;padding-top:4px}
+.resume{display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;text-align:left;background:var(--surface);border:1px solid var(--accent);border-radius:12px;padding:10px 14px;font-size:14px}
+.resume b{font-family:var(--display);font-size:16px}
+.resume .go{margin-left:auto;color:var(--accent);font-weight:600;font-size:13px}
+.restitle{font-size:22px;font-weight:700}
+.view{display:flex;flex-direction:column;gap:12px}
+@media (max-width:760px){.twocol{grid-template-columns:1fr}}
+@media (max-width:700px){
+  body{padding-block:10px 96px}
+  .apphead{position:static}
+  .tabs{position:fixed;left:0;right:0;bottom:0;border-radius:0;border-width:1px 0 0;padding:6px 6px calc(6px + env(safe-area-inset-bottom,0px));justify-content:space-around;z-index:20;box-shadow:0 -4px 16px rgba(20,18,40,.08)}
+  .tabs button{flex:1;flex-direction:column;gap:2px;font-size:11px;padding:5px 4px}
+  .tabs button[aria-selected="true"]{background:transparent;color:var(--accent)}
+  .tabs svg{width:22px;height:22px}
+  .count{position:absolute;top:0;left:calc(50% + 6px)}
+  .ctxs{display:flex;overflow-x:auto;scroll-snap-type:x mandatory;padding-bottom:6px;margin-inline:-16px;padding-inline:16px;scroll-padding-inline:16px}
+  .ctx{flex:0 0 128px;scroll-snap-align:start}
+  .toast{bottom:calc(84px + env(safe-area-inset-bottom,0px))}
+}
+
+/* v6 : réglages visibles */
+.tuneBar{display:flex;flex-direction:column;gap:8px}
+.setchips{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.setchip{display:flex;align-items:center;gap:10px;text-align:left;background:var(--surface);border:1.5px solid var(--line);border-radius:12px;padding:9px 12px;min-width:0;transition:border-color .15s,background .15s}
+.setchip:hover{border-color:var(--accent)}
+.setchip svg{width:22px;height:22px;flex:none;fill:none;stroke:var(--accent);stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+.setchip span{display:flex;flex-direction:column;min-width:0;flex:1}
+.setchip small{font-size:10.5px;color:var(--muted);text-transform:uppercase;letter-spacing:.07em;font-weight:600}
+.setchip b{font-size:14.5px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setchip .car{font-style:normal;color:var(--muted);font-size:12px;transition:transform .15s}
+.setchip[aria-expanded="true"]{border-color:var(--accent);background:var(--soft)}
+.setchip[aria-expanded="true"] .car{transform:rotate(180deg)}
+.setpanel{background:var(--surface);border:1.5px solid var(--accent);border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:10px}
+.setpanel p{margin:0;font-size:13px;color:var(--muted)}
+.linkbtn{border:0;background:none;padding:0;color:var(--accent);font-weight:600;text-decoration:underline;font-size:inherit}
+@media (max-width:900px){.setchips{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:700px){.setchips{grid-template-columns:repeat(2,minmax(0,1fr))}.setchip[data-set="duo"],.setchip[data-set="fam"]{grid-column:span 2}}
+
+/* v7 : famille */
+.agetag{font-family:var(--mono);font-size:11px;font-weight:600;border:1px solid var(--line);border-radius:5px;padding:0 5px;color:var(--ink)}
+.famlist{display:flex;flex-direction:column}
+.famrow{display:grid;grid-template-columns:minmax(0,1fr) auto 60px;gap:10px;align-items:center;padding:7px 0;border-top:1px solid var(--line)}
+.famrow:first-child{border-top:0}
+.famname{font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.famage{display:inline-flex;align-items:center;gap:8px}
+.famage b{min-width:52px;text-align:center;font-size:14px}
+
+/* v8 : identité visuelle */
+h1,h2,h3{font-stretch:115%;letter-spacing:-.015em}
+.label{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;font-weight:600}
+.logo{display:flex;align-items:center;gap:11px;font-size:26px;font-weight:900;font-stretch:125%;text-transform:uppercase;letter-spacing:-.02em}
+.led{width:11px;height:11px;border-radius:50%;background:var(--led);box-shadow:0 0 0 4px color-mix(in srgb,var(--led) 22%,transparent);flex:none}
+.mire{height:6px;border-radius:3px;background:linear-gradient(90deg,#BFBFBF 0 16.66%,#C9C21A 0 33.33%,#18B7C4 0 50%,#1FAF4B 0 66.66%,#B436B4 0 83.33%,#D4353B 0)}
+/* télécommande */
+.tabs{background:var(--remote);border-color:var(--remote);border-radius:14px;padding:5px;gap:3px}
+.tabs button{color:var(--onink);border-radius:10px}
+.tabs button:hover{color:#FFFFFF}
+.tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+.count{background:var(--led);color:#fff}
+@media (max-width:700px){
+  .tabs{border-radius:0;padding:6px 8px calc(6px + env(safe-area-inset-bottom,0px))}
+  .tabs button[aria-selected="true"]{background:var(--accent);color:var(--accent-ink)}
+}
+/* chaînes */
+.ctx{position:relative;padding-top:24px}
+.ch{position:absolute;top:8px;left:12px;font-family:var(--mono);font-size:10.5px;font-weight:600;color:var(--muted)}
+.ctx b{font-stretch:110%}
+.ctx[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.ctx[aria-pressed="true"] small,.ctx[aria-pressed="true"] .ch{color:var(--accent-ink);opacity:.85}
+.ctx[aria-pressed="true"] .ch::before{content:"● ";color:var(--led)}
+.kbd{font-family:var(--mono);font-size:11px;color:var(--muted)}
+@media (max-width:700px){.kbd{display:none}}
+/* cartes */
+.rank{display:flex;align-items:center;justify-content:center;width:44px;height:36px;border-radius:9px;background:var(--ink);color:var(--bg);font-family:var(--mono);font-size:15px;font-weight:600}
+.card.top .rank{background:var(--accent);color:var(--accent-ink)}
+.card.top{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.ctitle h3,.restitle,.sechead h2,.jtitle h2{font-stretch:118%}
+.restitle{font-size:24px;font-weight:800}
+.tip{background:var(--soft)}
+.setchip b{font-family:var(--display);font-stretch:108%}
+.bilan{position:relative;overflow:hidden;padding-top:24px}
+.bilan::before{content:"";position:absolute;left:0;right:0;top:0;height:6px;background:linear-gradient(90deg,#BFBFBF 0 16.66%,#C9C21A 0 33.33%,#18B7C4 0 50%,#1FAF4B 0 66.66%,#B436B4 0 83.33%,#D4353B 0)}
+.big{font-stretch:120%}
+.live{color:var(--led)}
+.live::before{background:var(--led)}
+.wcard{border-left-color:var(--led)}
+.addf{border-color:var(--accent)}
+
+/* v9 : étoiles */
+:root{--star:#F5B400;--star-empty:#D9D2CF}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--star:#FFC629;--star-empty:#4A403E}}
+:root[data-theme="dark"]{--star:#FFC629;--star-empty:#4A403E}
+.srow{display:inline-flex;gap:2px;vertical-align:middle;flex:none}
+.srow .st{width:15px;height:15px;fill:var(--star-empty);stroke:var(--star-empty);stroke-width:1.2;stroke-linejoin:round}
+.srow .st.on{fill:var(--star);stroke:var(--star)}
+.drow .srow .st{width:13px;height:13px}
+.btop .srow .st{width:14px;height:14px}
+.btop .srow .st:not(.on){display:none}
+.picker{display:flex;align-items:center;gap:2px;flex-wrap:wrap}
+.picker .pk{border:0;background:transparent;padding:4px;border-radius:10px;line-height:0;cursor:pointer}
+.picker .pk svg{width:38px;height:38px;fill:var(--star-empty);stroke:var(--star-empty);stroke-width:1.2;stroke-linejoin:round;transition:fill .12s,stroke .12s,transform .12s}
+.picker .pk.on svg{fill:var(--star);stroke:var(--star)}
+@media (hover:hover){
+  .picker:hover .pk svg{fill:var(--star);stroke:var(--star)}
+  .picker .pk:hover ~ .pk svg{fill:var(--star-empty);stroke:var(--star-empty)}
+  .picker .pk:hover svg{transform:scale(1.12)}
+}
+.picker .pk:focus-visible{outline:2px solid var(--accent);outline-offset:1px}
+.picker .pk.pop svg{animation:starpop .35s ease-out}
+@keyframes starpop{0%{transform:scale(.7)}60%{transform:scale(1.25)}100%{transform:scale(1)}}
+.pkhint{margin-left:10px;font-size:13px;color:var(--muted);padding:3px 10px;border-radius:999px}
+.pkhint.set{background:var(--chip);color:var(--ink);font-weight:700}
+.dbar i{background:var(--star)}
+.jitem.fav{border-color:var(--star)}
+.vrow button[aria-pressed="true"].fv{background:var(--star);border-color:var(--star);color:#1B1717}
+@media (prefers-reduced-motion:reduce){.picker .pk.pop svg{animation:none}.picker .pk svg{transition:none}}
+
+/* v10 : résumés */
+.acts .resb{font-weight:600}
+.acts .resb[aria-expanded="true"]{background:var(--chip);border-color:var(--ink)}
+.syn{margin-top:12px;padding:12px 14px;border-radius:12px;background:var(--chip);display:flex;flex-direction:column;gap:8px;max-width:68ch}
+.syntxt{margin:0;font-size:15px;line-height:1.55}
+.syntxt.none{color:var(--muted);font-style:italic}
+.synfacts{display:flex;flex-wrap:wrap;gap:4px 14px;font-size:12.5px;color:var(--muted)}
+.more{font-size:13px;font-weight:600;color:var(--accent);text-decoration:none;align-self:flex-start}
+.more:hover{text-decoration:underline}
+.wsyn summary{cursor:pointer;font-size:13px;font-weight:600;color:var(--accent);padding:2px 0}
+.wsyn .syn{margin-top:6px}
+
+/* v11 : logo */
+.appicon{width:38px;height:38px;border-radius:10px;flex:none;box-shadow:0 1px 3px rgba(0,0,0,.2)}
+.logo{font-size:30px}
+</style>
+
+<div class="wrap">
+  <header class="apphead">
+    <h1 class="logo"><img class="appicon" src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAMAAAADACAIAAADdvvtQAAAOUklEQVR4nOzdCXRU1RkH8G9msk7IJklAdsQIWKomgAYqYCFkWJKAIOe0KNrWVuUoloCCSsUtimABUdyOaEVbRZE9KAghLMq+GET2sAmFLCYQAtlnegVFy7sTZvLd9+aN+f/OHA657w0nMH/eu/e7974E5OTkkJ5CrcMtFgvpw0mW2899THoKrphEepr5wgP6/fuQy9mGJpOeAgiAAQECFgQIWBAgYEGAgAUBAhYECFgQIGBBgIAFAQIWBAhYECBgQYCABQECFgQIWBAgYEGAgAUBAhYECFgQIGBBgIAFAQIWBAhYECBgQYCABQECFgQIWBAgYEGAgAUBAhYECFgQIGBBgIAFAQIWBAhYECBgQYCABQECFgQIWBAgYEGAgAUBAhYECFgQIGBBgIAFAQIWBAhYECBgQYCABQECFgQIWBAgYEGAgAUBAhYECFgQIGDxQYD2H3CVFNO5c1R23lJRQRwuctmq5pKeXDUnSU9LS5dYLBZiCLYE2612uyUs0hbZNvgaMpZxAdp/gL5aTxs20OkzVlIngD4lf/Y5LSV1IqyRiaGdu4be3Ca4LRnCiAB9u5tmv09HjrL+n4EnSp1nVp9bJV4tAlsOjRx2XVA86UzfAOUdPDjvY8vuPYiO0Y5XfzejaFp8UPyoyMp2gcGkG0tOTg7pY+uWLW/MnFlbW0vgO8EWyyNRMd1Dw0gfKrsjv7R0yZKZM2YgPT5X6XI9X1ww7+wZ0of6W1hNTc27s2at//JLApOwWN49W3Kkpmp0VIzNorg7of4KtH3bNqTHhFaVn/uq4jyppjhAB/bvf/vNNwlMaXpJUV51JSmlMkBOp/Ot11+vrq4mMJY1OsTeq034sE5hfdsFNAt3d1oVif5QYa3LReqo7AOtzskpKioiMFZYcrvo+7paw38cqzura0vn7Cz9+BuqlQQlv7Zm2fmygWHhpIiyK1B5efmCefMIjBXYNjr64W6X0iNYA21RIxLst7Z295YPz5ZUqbsIKQvQss8+O1taSmCsqD8liMRI2v/axd1bTjudC8uUjeqVBeibnTsJDBcYHyNtD4gJEx0jd+/aqG44piZAp0tKDuXlEfiJfdVV39fWkApqArR9+3YCX6g+IB+11BSdc5bUtVZmY0U5qaAmQHkHDhD4wunZO8SwS9I+a2vdb9xXyVuK9RM1ATpzRq+pFqhb9aGSH0bs/+/8hmPn1xyp+40lTjXTlGrqQAiQD5X+J7fs8/1hvdoGdYoTeTq/5nDN8SsPh0ucTlJBTYCKCgsJfMdZXH52wW4SL48V1KqZMFATIP6yjdVr18TExJBSK5Z/kZGR4dVb5i+Yf1379u6OZj773Jw5c8hL9furVVZUlJaWnj17trCw6OjRI3l5hzZt2nRQXV+zRlEtEbsyfta+Q4c60iM4+jnqEaD6CQ4JiRWvuLhr2rW7JemWi407duyYP2/egvkLyDT0WlDmj4YMub3uExI7d27evBn5TkJCwnOZme/Nfs+338YvIUA/c/TrV/cJNpstLX0Q+VqXrl3nzJ170003kQkgQD/q2auXJz2VlJS+ZALRUVEz33i97huuMX7NAaqq8WKgMXDgAE9OE5+Z6CqRCURFRr744iTyNbN0oud+8klYWCPyXmpa6lVXXaVtLysre+vNt8hj4gqkbRSDoPDwy5fOiK7SpBcUfHKbNm7at2+f9FB0dFTLVq1atmzZuHHjOv4EkeYhdwyd/6kvV9GYJUCvzXyNvPfH4cOl6XG5XE89OdHz+d3BgwdpgyLM+eijv91332WNfZKTlQRo/fr178yaVfc54mp314gRDkeK3W6XnjBs2DDfBsiPb2EJiYmPjntUeuiD9z9Yvnw5eczRv7+2cdvWrVlZkn3HTZs27dmzJxli3969T06YMPKBke4qbZ06dbr66qvJd/w1QJGRkVOn/jMoKEh7aPu2bS9NmUIei4mN7dGjh7Z948ZNeQcPSmt3AzzrMKkioiyuhdJDFosluW8y+Y6/BmjqtGlxTZpo24uKisaMGevypsyanp4ubV+xYoX4de3addpDvW67TRT6yEDvvPOuu0PXxl9HvuOXARqdMTqpW5K2vaamZvy4cd5OzKU4UrSNl649Ky/E6DKiw9S/n4MMVJCfX1JSIj3UKEyvbcue8L8A9e7T+y/33is9NPPVmWJoQ964Nj5edCO07St+ys3OnTu/O/ad9oSUK1UdlXM3Jgi1h5Lv+FmAWrRokZn5vNUq+bbXrl076+23yUuDBkkqy+IOuGD+/EtfrpI9f6J79+6iH0YGsrspc5w/r36/qef8KUDBwcHTX345IjJCe+jYsWOPjRtP3uvXX3Ih2bVr14kT/730ZdbiRdpzAgICbr/S3Jlabdu2kbafOpVPvuNPAZowYULH6ztq28vLy8dmZJR6v6koKSlJOgZeuWLlL7/cs2fvocOHtac5DLyLtW7dOsRNt/3USX0fwlc3vwlQWnq6qLpKDz37zLPiMybvDUxL0zaKisvixYsva8zJXqU9U3Se2rR2u39PreF3Dnd3aPPmzeQ7/hGgjh07THxqovTQp5/MXaL5vD0RGBiYnNxH275j+/bCgoLLGhctXKg9U9Rgbh8yhPSX2LmzqLlLD4m77X438yHG8IMARURETJ0+PTRUMtbYs3vPpEn1nFVIcTik0xfZ2dnaxkOHDh3Yv1/b3ldWAlBI/K1HPTzqtddfk44bhOXLlpFP+cGKxBenTG7VqpW2XdRFMkaPrqys5/NK+g+QTF+ISlLWkizp+Tk5OfHXXV6yE99Y15u7btm8hbwnxnHu5kptNmvjmJioyKh27a6JjYtz9ydUVlQsWriIfMrsARJzmdKJJ6fT+fj4x44fP071Ikbg3bp107Zv3bLVXb1OBOu+++/XtqelptUvQLck3XJprWr9vDTlpeLiYvIpU9/CxL/vgw89KD0kSj5fMp6Dlj4oXRQFtO3ZK1e6e4u4i0m76r9P7iO6U2S4BQsWGrZAuw7mDZCY9J48ZYoot2gPbdyw8ZUZrxCDdAQu7l/L6uxS5KySdI+io6J69+5NBqqurhb/f56eOJFMwKS3MDHAmTp9mnSN6YkTJ8aOGUMMYuwtXVAs5r8SEhPqeGPx9/L7Rf8BA7xaPcIhSqZPPP7E1zt2kDmYNEDjxo+78cYbte1VVVWPjn2EuRE2fbB8YXz7Dh1eefVV8l6Pnj0aNWpUVlZGevp217dffPHFFdegGcyMAXI4HHeNGCE9JLqNO9kPIuonWz7GIbpTaWlpH7lZslM/YnRZWFhUUJBfUFBw9MiRpVlLRSeMzMd0ARL3l6effUb6A2yWZmV99OGHxCOKctKiAJOjn8PbAE2fNt1sl5N6MFcnOjgkZPqMl6X1PVHHmzjxKWJLS00lHSQkJppns5+RzBWgZ555Wlusowu7IzL+PrqygvtImx8WgOpTO7bZbOmDBlPDY6IAiemeVNnspsvlenriU0eOHiW25JS+YtRN+ujr07XJvmKWPtANN9zgbovFvz/4QNUgeWB/+WL4hQsX/uOJCeQZMeDKWbNaOzd3cc/hvr31WRfgv0xxBRITCy+52WKRm5s7ZbIXWyzqID743/W4VXpo2Wefk8fEcP2rdfIi+BBjl5iZgSkCNHXatObNm2vbi4qKxmaMcSl6kk1qaqp0Sr+osNDbWRF3BWuH4Qulfc73t7CHRj0k3WJBP4y8Dtx9zz3EkH/q5OzZ71/8vcPNPgpRnSMvZWdnS3c9i9J5z1691q5ZQw2G7wP0wMiR7g51695NvIhBVG8vBkiMsUUFSHrOZ1le/9hbMRslMjR4sGTYNXDggAYVIB/fwkS/hAwhxthipK1tP3T48Ne5ueQ9d90mcQUyeM+hbzWU5wO5e65PtmzfoCdEt0m6g1Hc1wb0b0A9oQYRIDG6ltYnhcWL6rOe+iJ3nSeH6rk2M2sQARo6VL70fdeuXYdl+3U85K7zlJSUZPCeQx9SEyDpQ3pMQkxfpDjk46/L9n95S3SepPvFAgIChgw1YrcGR6xNzfhJzc+Nn5SZ2dAqsP7ut0HBL8YoeLCQmhg2nCv2r0acVc1Hr+YW1sqoDZqgSvtgNbUGNQFK7NKFwK90D7GTCmoC1KxZs6ZNmxL4ifaBQdGysmo9KBvG4yLkR5IUXX5IYYBS09MjIiIITC/Sak0NU/ZJKQuQ3W6XPi0FzObO8Gi7VdnnrrIS3btPn5jYWAITi7MF9LOrnMBWGaDAoKD7R460KeqdgXLigxkXHWOTbZmqN8VzYWLO8s677yYwpVFRjTsGKV5qon4yVdzI+joMfYYyeOKOsIi+9nBSTZfZ+DtHjBAvi9JLJdSb+Iwfjmz850hdJrz1Ws4hLkKPjB8f0pDW5plTuMWa2biJI0z9teciNbPx7hQXF8//ZNSFLQ+4GhnORV3sXR+KOKlq5YaUvgESQq3DD+ZZ/vUeiV8JjNImsM0dUX9oG9i6DU0mPRmxKyP+Wnohk44fd36905KbS3v2UFU1wqReIAW2C7q2Y8hvrg++vlnQhX12LifpzLhtPS1aWFq0oNQLe4vz852n8qkgn06fsXB2DYr3flw1jPRkq1lHehqwrgtztBFhjYgJiI2xxcQGxpHhfLMvrEkTi+yHfXnNSZYPz+kboICKg6Sngblpfj1c9YPnRIOZIUDAggABCwIELAgQsCBAwIIAAQsCBCwIELAgQMCCAAELAgQsCBCwIEDAggABCwIELAgQsCBAwIIAAQsCBCwIELAgQMCCAAELAgQsCBCwIEDAggABCwIELAgQsCBAwIIAAQsCBCwIELAgQMCCAAELAgQsCBCwIEDAggABCwIELAgQsCBAwIIAAQsCBCwIELAgQMCCAAELAgQsCBCwIEDAggABCwIELAgQsCBAwIIAAQsCBCz/AwAA///gR7f3AAAABklEQVQDAMEAIqwAQUvuAAAAAElFTkSuQmCC" alt="" width="38" height="38">Zap</h1>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button role="tab" id="tab-now" data-tab="now" aria-controls="p-now"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5v14l11-7z"/></svg><span>Maintenant</span></button>
+      <button role="tab" id="tab-series" data-tab="series" aria-controls="p-series"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"/></svg><span>Mes séries</span><b class="count" id="cSeries" hidden></b></button>
+      <button role="tab" id="tab-journal" data-tab="journal" aria-controls="p-journal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3l2.7 5.6 6.1.9-4.4 4.3 1 6.1L12 17l-5.4 2.9 1-6.1L3.2 9.5l6.1-.9z"/></svg><span>Journal</span></button>
+      <button role="tab" id="tab-profil" data-tab="profil" aria-controls="p-profil"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg><span>Profil</span></button>
+    </nav>
+  </header>
+  <div class="mire" aria-hidden="true"></div>
+
+  <!-- ============ MAINTENANT ============ -->
+  <section class="panelTab" id="p-now" role="tabpanel" aria-labelledby="tab-now">
+    <div class="autoline"><span class="label">Tu es où, là ?</span><span id="autoInfo"></span><button class="switch" id="autoBtn" aria-pressed="true"><i></i>Choix selon l'heure</button><span class="kbd">Touches 1 à 0 pour zapper</span></div>
+    <div class="ctxs" id="ctxs"></div>
+
+    <section class="tuneBar" aria-label="Réglages">
+      <div class="autoline"><span class="label">Tes réglages</span><span>Touche un réglage pour le changer.</span></div>
+      <div class="setchips"><button class="setchip" data-set="time" aria-expanded="false" aria-controls="sp-time"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg><span><small>Temps dispo</small><b id="sv-time"></b></span><i class="car" aria-hidden="true">▾</i></button><button class="setchip" data-set="energy" aria-expanded="false" aria-controls="sp-energy"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 14h6l-1 7 8-11h-6z"/></svg><span><small>Énergie</small><b id="sv-energy"></b></span><i class="car" aria-hidden="true">▾</i></button><button class="setchip" data-set="screen" aria-expanded="false" aria-controls="sp-screen"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="5" width="18" height="12" rx="2"/><path d="M9 21h6M12 17v4"/></svg><span><small>Écran</small><b id="sv-screen"></b></span><i class="car" aria-hidden="true">▾</i></button><button class="setchip" data-set="humeur" aria-expanded="false" aria-controls="sp-humeur"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M8.5 14.5c1 1.2 2.1 1.8 3.5 1.8s2.5-.6 3.5-1.8M9 9.5h.01M15 9.5h.01"/></svg><span><small>Humeur</small><b id="sv-humeur"></b></span><i class="car" aria-hidden="true">▾</i></button><button class="setchip" data-set="duo" aria-expanded="false" aria-controls="sp-duo"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.3-5.5 6.5-5.5s5.7 2 6.5 5.5M16 4.8a3.5 3.5 0 010 6.4M18 14.8c1.9.8 3.1 2.6 3.5 5.2"/></svg><span><small>Mode à deux</small><b id="sv-duo"></b></span><i class="car" aria-hidden="true">▾</i></button><button class="setchip" data-set="fam" aria-expanded="false" aria-controls="sp-fam" hidden><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="7" cy="7" r="2.6"/><circle cx="17" cy="7" r="2.6"/><circle cx="12" cy="13" r="2"/><path d="M2.5 20c.4-3.6 2.1-6 4.5-6s3.3 1.2 3.8 2.6M21.5 20c-.4-3.6-2.1-6-4.5-6s-3.3 1.2-3.8 2.6M9 21c.3-2 1.4-3.3 3-3.3s2.7 1.3 3 3.3"/></svg><span><small>Famille</small><b id="sv-fam"></b></span><i class="car" aria-hidden="true">▾</i></button></div>
+      <div class="setpanel" id="sp-time" hidden>
+        <div class="label">Combien de temps tu as ?</div>
+        <div class="range"><input id="time" type="range" min="15" max="360" step="5" aria-label="Temps disponible"><span class="mono" id="timeOut"></span></div>
+        <div class="row"><button class="btn primary" data-setclose="1">OK</button></div>
+      </div>
+      <div class="setpanel" id="sp-energy" hidden><div class="label">Ton énergie</div><div class="seg" id="energy"></div></div>
+      <div class="setpanel" id="sp-screen" hidden><div class="label">Sur quel écran ?</div><div class="seg" id="screen"></div></div>
+      <div class="setpanel" id="sp-humeur" hidden><div class="label">Tu as envie de quoi ?</div><div class="seg" id="humeur"></div></div>
+      <div class="setpanel" id="sp-fam" hidden>
+        <div class="label">Qui regarde ?</div>
+        <div class="famlist" id="famList"></div>
+        <div class="row" style="align-items:flex-end">
+          <div class="field" style="display:flex;flex-direction:column;gap:4px"><label class="label" for="famName">Prénom</label><input type="text" id="famName" placeholder="Facultatif" maxlength="20" style="width:140px"></div>
+          <div class="field" style="display:flex;flex-direction:column;gap:4px"><label class="label" for="famAge">Âge</label><input type="number" id="famAge" min="0" max="99" placeholder="8" style="width:80px"></div>
+          <button class="btn primary" id="famAdd">Ajouter</button>
+        </div>
+        <div class="row"><span class="jmeta" style="align-self:center">Ajout rapide :</span><button class="btn" data-fpre="Adulte|35">+ Adulte</button><button class="btn" data-fpre="Ado|14">+ Ado (14)</button><button class="btn" data-fpre="Enfant|8">+ Enfant (8)</button><button class="btn" data-fpre="Petit|4">+ Petit (4)</button></div>
+        <p id="famInfo"></p>
+        <div class="row"><button class="btn primary" data-setclose="1">OK</button></div>
+      </div>
+      <div class="setpanel" id="sp-duo" hidden>
+        <div class="label">Tu regardes avec quelqu'un ?</div>
+        <div class="duopill"><button class="switch" id="duoBtn" aria-pressed="false"><i></i><span id="duoTxt">Mode à deux</span></button></div>
+        <p>Ses goûts se règlent dans l'onglet <button class="linkbtn" data-tab="profil">Profil</button>.</p>
+      </div>
+    </section>
+
+    <button class="resume" id="resume" hidden></button>
+
+    <div class="reshead">
+      <div class="seg" id="viewSeg" role="group" aria-label="Affichage">
+        <button data-view="sugg" aria-pressed="true">Suggestions</button>
+        <button data-view="prog" aria-pressed="false" id="progTab">Programme</button>
+        <button data-view="vote" aria-pressed="false">Vote entre potes</button>
+      </div>
+      <div class="row">
+        <button class="ghost" id="shuffle">Autres idées</button>
+        <button class="ghost" id="addBtn">+ Ajouter un titre</button>
+      </div>
+    </div>
+    <section class="addf" id="addZone" hidden></section>
+    <div id="v-sugg" class="view">
+      <div class="tip" id="tip"></div>
+      <h2 class="restitle" id="resTitle"></h2>
+      <div class="list" id="list"></div>
+    </div>
+    <div id="v-prog" class="view" hidden><section class="prog" id="progZone"></section></div>
+    <div id="v-vote" class="view" hidden><section class="vote" id="voteZone"></section></div>
+  </section>
+
+  <!-- ============ MES SÉRIES ============ -->
+  <section class="panelTab" id="p-series" role="tabpanel" aria-labelledby="tab-series" hidden>
+    <div class="twocol">
+      <div class="col">
+        <div class="sechead"><h2>En cours</h2><span class="label" id="nowCount"></span></div>
+        <div class="now" id="now"></div>
+        <div class="empty" id="nowEmpty">Rien en cours. Dans « Maintenant », touche « Je regarde » sur une suggestion pour suivre tes épisodes ici.</div>
+      </div>
+      <div class="col">
+        <div class="sechead"><h2>À voir plus tard</h2><span class="label" id="wishCount"></span></div>
+        <div class="panel"><div class="wlist" id="wish"></div></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ JOURNAL ============ -->
+  <section class="panelTab jsec" id="p-journal" role="tabpanel" aria-labelledby="tab-journal" hidden>
+    <div class="jtitle"><h2>Mon journal</h2><div class="row" style="align-items:center"><span class="label" id="jcount"></span><button class="ghost" id="addBtn2">+ Noter un titre vu ailleurs</button></div></div>
+    <section class="addf" id="addZone2" hidden></section>
+    <div class="seg" id="jview" role="group" aria-label="Vue du journal">
+      <button data-jv="list" aria-pressed="true">Mes notes</button>
+      <button data-jv="bilan" aria-pressed="false">Bilan du mois</button>
+      <button data-jv="stats" aria-pressed="false">Statistiques</button>
+    </div>
+    <div id="jv-bilan" hidden><div id="bilanZone"></div></div>
+    <div id="jv-stats" hidden><div class="jsum" id="jsum"></div></div>
+    <div id="jv-list">
+      <div class="tools">
+        <div class="field"><label class="label" for="jq">Chercher</label><input type="search" id="jq" placeholder="Titre ou mot du commentaire"></div>
+        <div class="field"><label class="label" for="jgroupSel">Ranger par</label>
+          <select id="jgroupSel"><option value="note">Note</option><option value="plat">Plateforme</option><option value="ctx">Moment</option><option value="type">Format</option><option value="month">Mois</option><option value="none">Tout ensemble</option></select></div>
+        <div class="field"><label class="label" for="jsort">Trier</label>
+          <select id="jsort"><option value="recent">Plus récent</option><option value="old">Plus ancien</option><option value="best">Meilleure note</option><option value="worst">Moins bonne note</option><option value="az">Titre A → Z</option></select></div>
+        <div class="field"><label class="label" for="jplat">Plateforme</label><select id="jplat"></select></div>
+        <div class="field"><label class="label" for="jcom">Commentaire</label>
+          <select id="jcom"><option value="all">Tous</option><option value="with">Avec commentaire</option><option value="without">Sans commentaire</option></select></div>
+        <div class="field"><label class="label" for="jstarSel">Étoiles</label>
+          <select id="jstarSel"><option value="0">Toutes</option><option value="5">5★</option><option value="4">4★</option><option value="3">3★</option><option value="2">2★</option><option value="1">1★</option></select></div>
+        <button class="ghost" id="jreset">Effacer les filtres</button>
+      </div>
+      <div id="journal" style="display:flex;flex-direction:column;gap:18px"></div>
+    </div>
+  </section>
+
+  <!-- ============ PROFIL ============ -->
+  <section class="panelTab" id="p-profil" role="tabpanel" aria-labelledby="tab-profil" hidden>
+    <div class="twocol">
+      <div class="col">
+        <div class="panel">
+          <h2>Mes abonnements</h2>
+          <div class="plats" id="plats"></div>
+        </div>
+        <div class="panel">
+          <h2>Tes goûts</h2>
+          <p id="profileNote"></p>
+          <div class="genres" id="genres"></div>
+        </div>
+        <div class="panel" id="duoPanel">
+          <h2>Mode à deux</h2>
+          <p>Marque les goûts de la personne avec qui tu regardes. L'algo cherche ce qui vous plaît à tous les deux et évite ce qu'elle n'aime pas.</p>
+          <div class="field" style="display:flex;flex-direction:column;gap:5px"><label class="label" for="duoName">Son prénom</label><input type="text" id="duoName" placeholder="Prénom" maxlength="24"></div>
+          <div class="genres" id="duoGenres"></div>
+        </div>
+      </div>
+      <div class="col">
+        <div class="panel">
+          <h2>Ce que l'algo a appris</h2>
+          <div class="insight" id="insight"></div>
+          <div class="learn" id="learn"></div>
+          <div class="stats" id="stats"></div>
+          <div id="resetZone"><button class="ghost" id="resetBtn">Tout réinitialiser</button></div>
+        </div>
+        <footer id="foot"></footer>
+      </div>
+    </div>
+  </section>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<datalist id="aList"></datalist>
+<script>
+const BASE = [
+ ["Stranger Things","netflix","serie",["sf","horreur","aventure"],50,2,["frisson","epic"]],
+ ["Arcane","netflix","serie",["fantasy","action","sf"],40,3,["epic"],{a:1,big:1}],
+ ["Squid Game","netflix","serie",["thriller","drame"],55,3,["frisson"]],
+ ["Lupin","netflix","serie",["policier","thriller"],45,2,["epic","feel"]],
+ ["La Casa de Papel","netflix","serie",["thriller","action"],50,2,["frisson","epic"]],
+ ["Dark","netflix","serie",["sf","thriller"],55,3,["reflexion","frisson"]],
+ ["Mercredi","netflix","serie",["fantasy","comedie","horreur"],50,2,["rire","frisson"]],
+ ["La Chronique des Bridgerton","netflix","serie",["romance","drame","historique"],60,1,["romance"]],
+ ["Emily in Paris","netflix","serie",["comedie","romance"],30,1,["rire","romance","cosy"]],
+ ["Sex Education","netflix","serie",["comedie","drame","romance"],50,1,["rire","feel"]],
+ ["Brooklyn Nine-Nine","netflix","serie",["comedie","policier"],22,1,["rire","cosy"]],
+ ["One Piece (live action)","netflix","serie",["aventure","action","fantasy"],60,2,["epic","feel"]],
+ ["The Witcher","netflix","serie",["fantasy","action"],60,2,["epic"]],
+ ["Notre planète","netflix","serie",["docu"],50,1,["chill","reflexion"],{big:1}],
+ ["Headspace : Guide du sommeil","netflix","serie",["docu"],20,1,["chill"],{a:1}],
+ ["Chef's Table","netflix","serie",["docu"],50,1,["chill","reflexion"]],
+ ["Le Jeu de la dame","netflix","serie",["drame","historique"],60,2,["reflexion"]],
+ ["Adolescence","netflix","serie",["drame","policier"],60,3,["reflexion"]],
+ ["Death Note","netflix","anime",["thriller","fantasy"],23,3,["frisson","reflexion"]],
+ ["Cyberpunk: Edgerunners","netflix","anime",["sf","action"],25,3,["epic"]],
+ ["Blue Eye Samurai","netflix","serie",["action","historique"],45,3,["epic"],{a:1,big:1}],
+ ["Castlevania","netflix","serie",["fantasy","action","horreur"],25,2,["epic","frisson"],{a:1}],
+ ["Violet Evergarden","netflix","anime",["drame","fantasy"],24,1,["feel","reflexion"]],
+ ["Le Voyage de Chihiro","netflix","film",["fantasy","famille"],125,1,["feel","cosy"],{a:1,big:1}],
+ ["Mon voisin Totoro","netflix","film",["famille","fantasy"],86,1,["cosy","chill","feel"],{a:1}],
+ ["Le Château ambulant","netflix","film",["fantasy","romance"],119,1,["romance","feel","cosy"],{a:1}],
+ ["Kiki la petite sorcière","netflix","film",["famille","fantasy"],103,1,["cosy","feel"],{a:1}],
+ ["Glass Onion","netflix","film",["policier","comedie"],139,2,["rire","frisson"]],
+ ["Don't Look Up","netflix","film",["comedie","sf"],138,2,["rire","reflexion"]],
+ ["Nimona","netflix","film",["fantasy","comedie","action"],101,1,["rire","feel"],{a:1}],
+ ["Klaus","netflix","film",["famille","comedie"],97,1,["cosy","feel"],{a:1}],
+ ["Extraction","netflix","film",["action","thriller"],116,2,["epic"]],
+
+ ["The Mandalorian","disney","serie",["sf","aventure","action"],40,2,["epic","feel"],{big:1}],
+ ["Andor","disney","serie",["sf","thriller"],45,3,["reflexion","epic"]],
+ ["Loki","disney","serie",["sf","fantasy","comedie"],50,2,["epic","rire"]],
+ ["The Bear","disney","serie",["drame","comedie"],30,3,["reflexion"]],
+ ["Only Murders in the Building","disney","serie",["policier","comedie"],30,1,["rire","cosy"]],
+ ["Shōgun","disney","serie",["historique","drame"],60,3,["epic","reflexion"],{big:1}],
+ ["How I Met Your Mother","disney","serie",["comedie","romance"],22,1,["rire","cosy","romance"]],
+ ["Modern Family","disney","serie",["comedie","famille"],22,1,["rire","cosy"]],
+ ["Les Simpson","disney","serie",["comedie"],22,1,["rire","cosy"],{a:1}],
+ ["Grey's Anatomy","disney","serie",["drame","romance"],43,1,["romance","feel"]],
+ ["Percy Jackson","disney","serie",["fantasy","aventure"],40,1,["epic","feel"]],
+ ["Secrets des baleines","disney","serie",["docu"],45,1,["chill","reflexion"],{big:1}],
+ ["Là-haut","disney","film",["famille","aventure"],96,1,["feel","romance"],{a:1}],
+ ["Vice-Versa 2","disney","film",["famille","comedie"],96,1,["feel","rire"],{a:1}],
+ ["Soul","disney","film",["famille","drame"],100,1,["feel","reflexion"],{a:1}],
+ ["Coco","disney","film",["famille","fantasy"],105,1,["feel"],{a:1}],
+ ["WALL-E","disney","film",["sf","famille","romance"],98,1,["romance","feel"],{a:1}],
+ ["Encanto","disney","film",["famille","fantasy"],102,1,["feel","cosy"],{a:1}],
+ ["Avatar : la voie de l'eau","disney","film",["sf","aventure"],192,2,["epic"],{big:1}],
+ ["Les Gardiens de la Galaxie","disney","film",["sf","action","comedie"],121,2,["epic","rire"],{big:1}],
+ ["Avengers: Endgame","disney","film",["action","sf"],181,2,["epic"],{big:1}],
+ ["Deadpool & Wolverine","disney","film",["action","comedie"],128,2,["rire","epic"]],
+ ["Alien: Romulus","disney","film",["horreur","sf"],119,3,["frisson"]],
+ ["Pauvres Créatures","disney","film",["drame","fantasy","comedie"],141,3,["reflexion"]],
+
+ ["Frieren","crunchy","anime",["fantasy","aventure"],24,1,["cosy","feel","reflexion"]],
+ ["Jujutsu Kaisen","crunchy","anime",["action","fantasy","horreur"],24,3,["epic","frisson"]],
+ ["Demon Slayer","crunchy","anime",["action","fantasy"],24,2,["epic"],{big:1}],
+ ["Solo Leveling","crunchy","anime",["action","fantasy"],24,2,["epic"]],
+ ["Spy x Family","crunchy","anime",["comedie","action","famille"],24,1,["rire","cosy","feel"]],
+ ["Chainsaw Man","crunchy","anime",["action","horreur"],24,3,["frisson","epic"]],
+ ["Dan Da Dan","crunchy","anime",["action","comedie","sf"],24,2,["rire","epic"]],
+ ["One Piece","crunchy","anime",["aventure","action","comedie"],24,1,["epic","feel","rire"]],
+ ["L'Attaque des Titans","crunchy","anime",["action","drame"],24,3,["epic","frisson","reflexion"]],
+ ["Mob Psycho 100","crunchy","anime",["action","comedie"],24,2,["rire","feel"]],
+ ["Horimiya","crunchy","anime",["romance","comedie"],24,1,["romance","cosy"]],
+ ["Kaguya-sama: Love is War","crunchy","anime",["romance","comedie"],24,1,["romance","rire"]],
+ ["My Dress-Up Darling","crunchy","anime",["romance","comedie"],24,1,["romance","rire","cosy"]],
+ ["Laid-Back Camp","crunchy","anime",["comedie"],24,1,["chill","cosy"]],
+ ["Mushishi","crunchy","anime",["fantasy"],24,1,["chill","reflexion"]],
+ ["Les Carnets de l'apothicaire","crunchy","anime",["policier","historique","romance"],24,2,["reflexion","cosy"]],
+ ["Kaiju No. 8","crunchy","anime",["action","sf"],24,2,["epic"]],
+ ["Haikyu!!","crunchy","anime",["sport","comedie"],24,1,["feel","epic"]],
+ ["Blue Lock","crunchy","anime",["sport","action"],24,2,["epic"]],
+ ["Vinland Saga","crunchy","anime",["historique","action","drame"],24,3,["epic","reflexion"]],
+ ["Jujutsu Kaisen 0","crunchy","film",["action","fantasy"],105,3,["epic"],{anime:1}],
+
+ ["Le Bureau des Légendes","canal","serie",["thriller","drame"],52,3,["reflexion","frisson"]],
+ ["Baron Noir","canal","serie",["drame"],55,3,["reflexion"]],
+ ["Paris Police 1900","canal","serie",["policier","historique"],52,3,["frisson"]],
+ ["Engrenages","canal","serie",["policier","thriller"],52,3,["frisson"]],
+ ["Hippocrate","canal","serie",["drame"],52,2,["reflexion","feel"]],
+ ["Validé","canal","serie",["drame"],40,2,["feel"]],
+
+ ["The Boys","prime","serie",["action","comedie","sf"],60,3,["frisson","rire"]],
+ ["Fallout","prime","serie",["sf","aventure","comedie"],60,2,["epic","rire"],{big:1}],
+ ["Invincible","prime","serie",["action","sf"],45,3,["epic"],{a:1}],
+ ["Reacher","prime","serie",["action","policier"],50,2,["epic"]],
+ ["LOL : qui rit, sort !","prime","serie",["comedie"],40,1,["rire","cosy"]],
+
+ ["Severance","apple","serie",["sf","thriller"],50,3,["reflexion","frisson"]],
+ ["Ted Lasso","apple","serie",["comedie","sport"],35,1,["feel","rire","cosy"]],
+ ["Slow Horses","apple","serie",["thriller","comedie"],45,2,["frisson","rire"]]
+];
+</script>
+<script>
+
+/*ZAPPEUR-CATALOGUE-AUTO:START*/
+// Bloc mis à jour chaque semaine par la tâche planifiée. Format d'une ligne :
+// [titre, plateforme (netflix|disney|crunchy|canal|prime|apple), format (film|serie|anime), [genres], durée en min (film) ou par épisode,
+//  attention 1-3, [ambiances], {nw:"AAAA-MM-JJ" (date d'ajout), big:1 si spectacle visuel, a:1 si animation non-anime}]
+const CATALOGUE_MAJ = "2026-09-29";
+const AUTO = [
+ ["Demon Slayer : La Forteresse Infinie","netflix","film",["action","fantasy"],155,2,["epic"],{nw:"2026-09-29",anime:1,big:1}],
+ ["Unabomber","netflix","film",["thriller","policier","drame"],107,2,["frisson","reflexion"],{nw:"2026-09-29"}],
+ ["JoJo's Bizarre Adventure : Steel Ball Run","netflix","anime",["action","aventure"],24,2,["epic"],{nw:"2026-09-29"}],
+ ["American Horror Story","disney","serie",["horreur","thriller"],45,2,["frisson"],{nw:"2026-09-29"}],
+ ["The Drop : une saga Snowfall","disney","serie",["drame","policier"],50,3,["frisson","reflexion"],{nw:"2026-09-29"}],
+ ["The Love Hypothesis","prime","film",["romance","comedie"],112,1,["romance","feel","rire"],{nw:"2026-09-29"}],
+ ["Until Dawn","prime","film",["horreur"],103,2,["frisson"],{nw:"2026-09-29"}],
+ ["Brothers","apple","serie",["comedie"],30,1,["rire"],{nw:"2026-09-29"}],
+ ["Hurlevent","canal","film",["romance","drame","historique"],136,2,["romance","reflexion"],{nw:"2026-09-29"}],
+ ["Nuremberg","canal","film",["historique","drame"],148,3,["reflexion"],{nw:"2026-09-29"}],
+ ["Overgeared","crunchy","anime",["action","fantasy"],24,2,["epic"],{nw:"2026-09-29"}],
+ ["Mononoké, chapitre III : La Malédiction du serpent","netflix","film",["horreur","fantasy","historique"],87,2,["frisson"],{nw:"2026-09-29",anime:1}],
+ ["Le Problème final","netflix","serie",["policier","thriller","historique"],45,2,["frisson","reflexion"],{nw:"2026-09-29"}]
+];
+// Titres partis de leur plateforme (noms exacts) : ils ne sont plus proposés.
+const RETIRES = [
+ "Death Note"
+];
+/*ZAPPEUR-CATALOGUE-AUTO:END*/
+</script>
+<script>
+
+// Résumés courts, sans spoiler
+const RES = {
+"Stranger Things":"Années 80, une petite ville de l'Indiana. Un garçon disparaît, une fillette aux pouvoirs étranges surgit de la forêt, et ses copains à vélo vont découvrir qu'un monde cauchemardesque se cache juste sous le leur.",
+"Arcane":"Deux sœurs grandies dans les bas-fonds de Zaun se retrouvent de part et d'autre d'une guerre entre la ville d'en bas et la brillante Piltover. Une animation peinte à la main à couper le souffle, et une histoire de famille déchirante.",
+"Squid Game":"Criblés de dettes, 456 inconnus acceptent de participer à des jeux d'enfants pour une somme colossale. Sauf qu'ici, perdre à « 1, 2, 3, soleil » coûte beaucoup plus cher qu'une partie.",
+"Lupin":"Assane Diop, fan absolu d'Arsène Lupin, utilise les méthodes du gentleman cambrioleur pour venger son père, accusé à tort d'un vol de collier. Des coups montés malins en plein Paris.",
+"La Casa de Papel":"Un mystérieux « Professeur » réunit huit braqueurs aux noms de villes pour le casse du siècle : s'enfermer dans la Fabrique nationale de la monnaie et imprimer leurs propres milliards.",
+"Dark":"En Allemagne, dans une petite ville à l'ombre d'une centrale nucléaire, la disparition d'un enfant révèle des liens vertigineux entre quatre familles… sur plusieurs époques. Casse-tête temporel à regarder bien réveillé.",
+"Mercredi":"Mercredi Addams, sarcastique et glaciale, débarque à Nevermore, l'école des marginaux. Entre pouvoirs psychiques naissants et série de meurtres à élucider, elle n'a pas le temps de se faire des amis. Et tant mieux.",
+"La Chronique des Bridgerton":"Londres, haute société des années 1810. Chaque saison, une des sœurs ou un des frères Bridgerton cherche l'amour sous l'œil d'une mystérieuse chroniqueuse qui balance tous les ragots. Robes, bals et regards brûlants.",
+"Emily in Paris":"Une Américaine pleine d'enthousiasme débarque à Paris pour bosser dans une agence de marketing. Choc culturel, collègues snobs, voisin craquant : Paris vu en carte postale, léger et pétillant.",
+"Sex Education":"Otis, lycéen coincé mais fils d'une sexothérapeute, monte un cabinet de conseils clandestin dans son lycée avec la rebelle Maeve. Drôle, tendre et étonnamment juste sur l'adolescence.",
+"Brooklyn Nine-Nine":"Le commissariat le plus déjanté de New York : Jake Peralta, flic brillant mais immature, face à son capitaine impassible. Des blagues à la minute et des personnages qu'on adore tous.",
+"One Piece (live action)":"Luffy, garçon au corps élastique, prend la mer pour trouver le trésor légendaire et devenir le roi des pirates. Il recrute un équipage de bras cassés attachants. Une adaptation qui respecte vraiment le manga.",
+"The Witcher":"Geralt de Riv, chasseur de monstres aux cheveux blancs, voit son destin lié à celui d'une princesse en fuite et d'une puissante magicienne. Épées, sorts et politique dans un monde sombre.",
+"Notre planète":"Des images spectaculaires des derniers espaces sauvages de la Terre, des jungles aux fonds marins, racontées avec douceur. Parfait pour se poser et en prendre plein les yeux.",
+"Headspace : Guide du sommeil":"Des épisodes courts, animés et apaisants, pour se détendre et mieux dormir. Pensé pour être regardé les yeux qui se ferment.",
+"Chef's Table":"Chaque épisode suit un grand chef et sa vision de la cuisine, filmé comme une œuvre d'art. On en sort avec faim et des idées plein la tête.",
+"Le Jeu de la dame":"Années 50, une orpheline découvre les échecs avec le concierge de son orphelinat et se révèle être un génie. Son ascension vers le sommet mondial est aussi un combat contre ses démons.",
+"Adolescence":"Un garçon de 13 ans est arrêté pour meurtre. Chaque épisode est tourné en un seul plan-séquence, au plus près de la famille, des policiers et des questions qui dérangent. Fort et bouleversant.",
+"Death Note":"Un lycéen brillant trouve un carnet qui tue toute personne dont on y écrit le nom. Il décide de nettoyer le monde des criminels, jusqu'à ce qu'un détective aussi génial que lui se lance à sa poursuite.",
+"Cyberpunk: Edgerunners":"Dans la mégalopole de Night City, un gamin des rues devient mercenaire après avoir greffé un implant militaire. Une course folle, néon et ultra-violente, signée Studio Trigger.",
+"Blue Eye Samurai":"Japon, période Edo. Une épéiste masquée aux yeux bleus, rejetée pour son sang mêlé, se lance dans une vengeance implacable. Une animation somptueuse et des combats magnifiques.",
+"Castlevania":"Dracula déclare la guerre à l'humanité. Un chasseur de monstres déchu, une magicienne et le fils de Dracula lui-même s'allient pour l'arrêter. Gothique, violent et très bien écrit.",
+"Violet Evergarden":"Après la guerre, une ancienne soldate devient écrivaine publique : elle rédige des lettres pour les autres, pour comprendre enfin le sens de « je t'aime ». Magnifique et très émouvant.",
+"Le Voyage de Chihiro":"En déménageant, Chihiro se retrouve piégée dans un monde d'esprits où ses parents ont été changés en cochons. Pour les sauver, elle travaille dans des bains pour divinités. Un chef-d'œuvre de Miyazaki.",
+"Mon voisin Totoro":"Deux sœurs s'installent à la campagne et rencontrent Totoro, un gros esprit de la forêt tout doux. Un film tendre et apaisant, qui ressemble à un souvenir d'enfance.",
+"Le Château ambulant":"Transformée en vieille dame par une sorcière, la jeune Sophie trouve refuge dans le château ambulant du magicien Hauru. Magie, guerre et une belle histoire d'amour.",
+"Kiki la petite sorcière":"À 13 ans, Kiki quitte ses parents pour faire son apprentissage de sorcière dans une ville au bord de la mer. Elle y lance un service de livraison sur son balai. Doux et plein de charme.",
+"Glass Onion":"Le détective Benoit Blanc est invité sur l'île grecque d'un milliardaire pour une murder party entre amis. Évidemment, le jeu tourne mal. Un whodunit malin et drôle.",
+"Don't Look Up":"Deux astronomes découvrent qu'une comète va percuter la Terre dans six mois. Problème : personne ne veut les écouter. Une satire mordante des médias et des politiques.",
+"Nimona":"Dans un royaume futuriste médiéval, un chevalier accusé d'un crime qu'il n'a pas commis fait équipe avec Nimona, une ado métamorphe complètement imprévisible. Drôle, punk et touchant.",
+"Klaus":"Un postier paresseux est envoyé sur une île glaciale où personne n'écrit de lettres. Il s'associe à un fabricant de jouets solitaire… et invente sans le vouloir la légende du père Noël.",
+"Extraction":"Un mercenaire doit exfiltrer le fils kidnappé d'un baron de la drogue dans les rues de Dacca. De l'action non-stop, avec un plan-séquence de dix minutes devenu culte.",
+"The Mandalorian":"Après la chute de l'Empire, un chasseur de primes solitaire se retrouve à protéger un mystérieux petit être aux grandes oreilles. Un western spatial dans l'univers Star Wars.",
+"Andor":"Avant Rogue One, un voleur sans cause devient peu à peu un rebelle. La série Star Wars la plus adulte : espionnage, politique et révolte qui monte.",
+"Loki":"Le dieu de la malice est arrêté par une agence qui surveille le flux du temps. Pour se racheter, il doit traquer… une autre version de lui-même. Fun et inventif.",
+"The Bear":"Un jeune chef étoilé revient à Chicago reprendre la sandwicherie de son frère disparu. Cuisine sous pression, cris et tendresse : une série intense qui se regarde comme on court un service.",
+"Only Murders in the Building":"Trois voisins fans de podcasts criminels se mettent à enquêter sur un meurtre dans leur immeuble chic de New York. Comédie policière douce et très drôle.",
+"Shōgun":"Japon, 1600. Un navigateur anglais échoue sur les côtes et se retrouve pris dans la lutte de pouvoir d'un seigneur ambitieux. Une fresque somptueuse, pleine d'intrigues.",
+"How I Met Your Mother":"En 2030, Ted raconte à ses enfants comment il a rencontré leur mère. Ça prend du temps, et ça passe par ses meilleurs potes, un bar new-yorkais et beaucoup de bêtises.",
+"Modern Family":"Trois familles liées, trois façons d'être une famille, filmées façon documentaire. Des situations du quotidien qui partent en vrille, tout en tendresse.",
+"Les Simpson":"Homer, Marge, Bart, Lisa et Maggie à Springfield. La famille jaune la plus célèbre, avec des centaines d'épisodes pour rire à n'importe quel moment.",
+"Grey's Anatomy":"Meredith Grey et ses camarades internes apprennent le métier de chirurgien dans un grand hôpital de Seattle. Urgences, amours et amitiés à la vie à la mort.",
+"Percy Jackson":"Percy, 12 ans, découvre qu'il est le fils d'un dieu grec. Accusé d'avoir volé la foudre de Zeus, il part en quête à travers l'Amérique avec ses amis. Aventure mythologique pour toute la famille.",
+"Secrets des baleines":"Une plongée au plus près des baleines pour découvrir leurs cultures, leurs langages et leurs liens familiaux. Des images sous-marines incroyables.",
+"Là-haut":"Un vieux monsieur grincheux accroche des milliers de ballons à sa maison pour s'envoler vers l'Amérique du Sud… sans savoir qu'un petit scout est resté sur le perron. Drôle et bouleversant.",
+"Vice-Versa 2":"Riley entre dans l'adolescence, et de nouvelles émotions débarquent dans sa tête, menées par l'Anxiété. Joie et sa bande vont devoir se battre pour garder leur place.",
+"Soul":"Un prof de musique qui rêve de jazz se retrouve séparé de son corps juste avant le concert de sa vie. Pour revenir, il doit aider une âme qui n'a aucune envie de naître.",
+"Coco":"Miguel rêve de musique, interdite dans sa famille. Le jour des morts, il se retrouve au pays des ancêtres, un monde coloré et magnifique, pour percer un secret de famille.",
+"WALL-E":"Seul robot resté sur une Terre recouverte de déchets, WALL-E fait le ménage depuis des siècles. Un jour arrive EVE, et il la suivra jusqu'au bout de l'espace. Une histoire d'amour presque sans paroles.",
+"Encanto":"Dans une maison magique en Colombie, chaque membre de la famille Madrigal a un don extraordinaire. Sauf Mirabel. Pourtant, c'est peut-être elle qui peut sauver la famille.",
+"Avatar : la voie de l'eau":"Jake Sully et sa famille doivent fuir la forêt et se réfugier auprès d'un peuple des océans de Pandora. Un spectacle visuel énorme, à voir sur le plus grand écran possible.",
+"Les Gardiens de la Galaxie":"Un voleur de l'espace, une tueuse, une brute, un raton laveur armé et un arbre qui dit une seule phrase doivent sauver la galaxie. Avec une bande-son années 70 géniale.",
+"Avengers: Endgame":"Après la victoire de Thanos, les Avengers survivants tentent l'impossible pour tout réparer. Le grand final de dix ans de films Marvel, épique et émouvant.",
+"Deadpool & Wolverine":"Deadpool, mercenaire bavard et indestructible, doit faire équipe avec un Wolverine de très mauvaise humeur pour sauver son univers. Méta, gore et très drôle.",
+"Alien: Romulus":"Des jeunes colons fouillent une station spatiale abandonnée pour s'échapper de leur planète minière. Ils ne sont pas seuls à bord. Retour à l'horreur spatiale pure.",
+"Pauvres Créatures":"Bella, ramenée à la vie par un savant excentrique, découvre le monde avec une liberté totale et part à l'aventure à travers l'Europe. Étrange, audacieux et visuellement unique.",
+"Frieren":"Après avoir vaincu le roi démon, l'elfe magicienne Frieren voit ses compagnons humains vieillir et disparaître. Elle repart en voyage pour comprendre ce qu'ils représentaient pour elle. Doux et poétique.",
+"Jujutsu Kaisen":"Pour sauver ses amis, un lycéen avale le doigt d'un démon légendaire et se retrouve hôte d'une malédiction surpuissante. Il rejoint une école d'exorcistes. Combats spectaculaires.",
+"Demon Slayer":"Après le massacre de sa famille, Tanjiro devient chasseur de démons pour rendre sa sœur, transformée en démon, humaine à nouveau. Une animation de combats parmi les plus belles qui soient.",
+"Solo Leveling":"Sung Jin-Woo, le chasseur le plus faible du monde, reçoit un mystérieux système qui lui permet de monter de niveau comme dans un jeu vidéo. De nul à invincible, un épisode après l'autre.",
+"Spy x Family":"Un espion doit fonder une fausse famille pour sa mission. Il adopte une fillette qui lit dans les pensées et épouse une tueuse à gages. Aucun ne connaît le secret des autres. Adorable et hilarant.",
+"Chainsaw Man":"Denji, pauvre et endetté, fusionne avec son chien-tronçonneuse et devient chasseur de démons pour le gouvernement. Déjanté, violent et imprévisible.",
+"Dan Da Dan":"Une lycéenne qui croit aux fantômes et un garçon qui croit aux extraterrestres se lancent un défi. Ils avaient raison tous les deux. Complètement fou, drôle et très bien animé.",
+"One Piece":"Luffy et son équipage de pirates naviguent de mer en mer à la recherche du One Piece, le trésor légendaire. Une aventure immense sur l'amitié et la liberté.",
+"L'Attaque des Titans":"L'humanité survit derrière d'immenses murs pour se protéger de titans mangeurs d'hommes. Le jour où un mur tombe, Eren jure de tous les exterminer. Épique et plein de rebondissements.",
+"Mob Psycho 100":"Mob, collégien timide, a des pouvoirs psychiques terrifiants qu'il essaie de ne jamais utiliser. Il bosse pour un faux médium escroc. Drôle, visuellement dingue et très touchant.",
+"Horimiya":"La fille parfaite du lycée et le garçon discret de la classe découvrent chacun la vraie vie de l'autre en dehors de l'école. Une romance douce et naturelle.",
+"Kaguya-sama: Love is War":"Les deux meilleurs élèves du lycée sont amoureux l'un de l'autre, mais trop fiers pour l'avouer. Chacun élabore des stratégies pour forcer l'autre à craquer en premier. Hilarant.",
+"My Dress-Up Darling":"Un lycéen passionné de poupées traditionnelles aide la fille la plus populaire de la classe à réaliser ses costumes de cosplay. Rom-com mignonne sur la passion.",
+"Laid-Back Camp":"Des lycéennes partent camper dans les montagnes du Japon, préparent des nouilles et regardent le mont Fuji. Ultra relaxant, le parfait anime pour se détendre.",
+"Mushishi":"Ginko parcourt un Japon rural et brumeux pour soigner les gens affectés par les mushi, des formes de vie mystérieuses. Contemplatif et apaisant, chaque épisode est un conte.",
+"Les Carnets de l'apothicaire":"Maomao, jeune apothicaire enlevée et vendue comme servante au palais impérial, utilise ses connaissances en poisons pour résoudre des mystères. Enquêtes malignes et héroïne géniale.",
+"Kaiju No. 8":"Kafka, 32 ans, nettoie les restes de monstres géants. Le jour où il se transforme lui-même en kaiju, il décide quand même de réaliser son rêve : rejoindre les forces de défense.",
+"Haikyu!!":"Hinata, petit mais bondissant, rêve de devenir un grand du volley. Il doit faire équipe avec son pire rival. Le meilleur anime de sport pour vibrer à chaque match.",
+"Blue Lock":"Pour créer le meilleur attaquant du monde, le Japon enferme 300 jeunes footballeurs dans un programme impitoyable. Seul le plus égoïste survivra.",
+"Vinland Saga":"Au temps des Vikings, Thorfinn grandit au sein de la bande de l'homme qui a tué son père, attendant l'occasion de se venger. Une épopée brutale qui devient profondément humaine.",
+"Jujutsu Kaisen 0":"Avant la série, Yuta Okkotsu est hanté par l'esprit de son amie d'enfance, devenue une malédiction toute-puissante. Il rejoint l'école d'exorcistes pour apprendre à la maîtriser.",
+"Le Bureau des Légendes":"Au cœur de la DGSE, un agent revient après six ans sous couverture en Syrie… sans vraiment abandonner sa fausse identité. La série d'espionnage française de référence, réaliste et tendue.",
+"Baron Noir":"Un député-maire du Nord, trahi par son candidat à la présidentielle, se lance dans une vengeance politique à coups de manœuvres. Les coulisses du pouvoir comme on les imagine.",
+"Paris Police 1900":"Paris, 1899. En pleine affaire Dreyfus, un jeune inspecteur enquête sur un meurtre sordide au milieu des complots antisémites et politiques. Sombre, violent et superbe.",
+"Engrenages":"Une capitaine de police, un juge d'instruction et une avocate ambitieuse dans la machine judiciaire parisienne. Réaliste, dur et addictif.",
+"Hippocrate":"Faute de médecins titulaires, des internes se retrouvent en première ligne dans un hôpital public débordé. Une série sur la réalité de l'hôpital, écrite par un médecin.",
+"Validé":"Un jeune rappeur de banlieue voit sa carrière décoller grâce à un clip viral. Le rêve devient vite plus compliqué. Une plongée dans le rap français, rythmée et sincère.",
+"The Boys":"Et si les super-héros étaient des stars corrompues et dangereuses ? Une bande de justiciers sans pouvoirs décide de les faire tomber. Trash, satirique et jubilatoire.",
+"Fallout":"Deux cents ans après l'apocalypse nucléaire, une habitante naïve d'un abri souterrain sort à la surface. Le désert radioactif de Californie est drôle, cruel et plein de surprises.",
+"Invincible":"Mark, fils du plus puissant super-héros de la Terre, découvre enfin ses propres pouvoirs. Ce qui commence comme un dessin animé classique prend un virage choc.",
+"Reacher":"Jack Reacher, ancien militaire colossal et sans attaches, débarque dans une petite ville et se retrouve accusé de meurtre. Il va remonter la piste à sa façon : avec ses poings et sa tête.",
+"LOL : qui rit, sort !":"Dix humoristes enfermés six heures, avec une seule règle : le premier qui rit est éliminé. Des fous rires garantis de l'autre côté de l'écran.",
+"Severance":"Des employés ont accepté une opération qui sépare leurs souvenirs du travail de ceux de leur vie privée. Mais que fait vraiment leur mystérieuse entreprise ? Troublant et captivant.",
+"Ted Lasso":"Un entraîneur de football américain sans aucune expérience du football est engagé pour diriger un club anglais. Son optimisme à toute épreuve va tout changer. La série feel-good par excellence.",
+"Slow Horses":"Les espions ratés du MI5 sont relégués dans un bureau miteux. Menés par un chef aussi odieux que brillant, ils se retrouvent pourtant au cœur des vraies affaires. Drôle et tendu.",
+"Demon Slayer : La Forteresse Infinie":"Tanjiro et les piliers sont aspirés dans la forteresse mouvante de Muzan pour l'affrontement final contre les démons. Des combats d'une ampleur jamais vue dans la série.",
+"JoJo's Bizarre Adventure : Steel Ball Run":"1890, une course à cheval folle à travers les États-Unis, avec un prix colossal à la clé. Un jockey paralysé et un mystérieux concurrent y cherchent bien plus que la victoire.",
+"American Horror Story":"Chaque saison est une histoire d'horreur différente : maison hantée, asile, cirque, sorcières… avec souvent les mêmes acteurs dans de nouveaux rôles. Choisis ton cauchemar.",
+"The Love Hypothesis":"Pour convaincre sa meilleure amie qu'elle a tourné la page, une doctorante embrasse le premier venu : un jeune professeur réputé glacial. Le faux couple qui en découle ne va pas rester faux longtemps.",
+"Until Dawn":"Un groupe d'amis cherche une sœur disparue dans une vallée isolée et se retrouve pris dans une boucle : chaque nuit, ils meurent, et tout recommence. Adapté du jeu vidéo culte.",
+"Hurlevent":"Dans les landes sauvages du Yorkshire, l'amour dévorant et destructeur de Catherine et Heathcliff, deux êtres liés depuis l'enfance. Une adaptation passionnée du roman d'Emily Brontë.",
+"Nuremberg":"1945, avant le grand procès des nazis, un psychiatre américain est chargé d'évaluer Hermann Göring. Un face-à-face psychologique intense tiré de faits réels.",
+"Unabomber":"L'histoire vraie de Ted Kaczynski, le poseur de bombes qui a terrorisé les États-Unis pendant près de vingt ans. Le film alterne entre ses années à Harvard et la longue traque du FBI, avec Jacob Tremblay et Russell Crowe.",
+"The Drop : une saga Snowfall":"Los Angeles, début des années 90. Sortie de la drogue, Wanda veut percer dans l'industrie musicale en lançant de jeunes rappeurs, au milieu des gangs et de la guerre entre maisons de disques. La suite de l'univers Snowfall, sur la naissance du rap West Coast.",
+"Brothers":"Matthew McConaughey et Woody Harrelson jouent leurs propres rôles : les deux amis s'installent ensemble dans le ranch texan de McConaughey… et découvrent qu'ils pourraient bien être frères. Une comédie qui joue sur leur vraie complicité.",
+"Mononoké, chapitre III : La Malédiction du serpent":"Le mystérieux Apothicaire revient au palais impérial, où la naissance d'un héritier tourne au drame. Des morts étranges s'enchaînent et un gigantesque serpent divin se réveille : pour le vaincre, il doit en découvrir la Forme, la Vérité et la Raison.",
+"Le Problème final":"Printemps 1959, un hôtel sur une petite île près de Majorque. Une touriste anglaise est retrouvée morte, une tempête coupe l'île du monde : le coupable est forcément parmi les treize personnes présentes. Un ancien acteur qui jouait Sherlock Holmes va devoir mener une vraie enquête.",
+"Overgeared":"Shin Youngwoo, joueur malchanceux et fauché, décroche une classe légendaire de forgeron dans un jeu de réalité virtuelle. De raté total à légende du jeu."
+};
+
+const PLATS = {
+  netflix:{n:"Netflix",c:"#E50914"}, disney:{n:"Disney+",c:"#1F63E0"}, crunchy:{n:"Crunchyroll",c:"#F47521"},
+  canal:{n:"Canal+",c:"#7A7A86"}, prime:{n:"Prime Video",c:"#00A8E1"}, apple:{n:"Apple TV+",c:"#9A9AA5"},
+  autre:{n:"Autre",c:"#8C8AA0"}
+};
+const SUBS=["netflix","disney","crunchy","canal","prime","apple"];
+const SEARCH = {
+  netflix:q=>"https://www.netflix.com/search?q="+q,
+  disney:q=>"https://www.disneyplus.com/search?q="+q,
+  crunchy:q=>"https://www.crunchyroll.com/fr/search?q="+q,
+  prime:q=>"https://www.primevideo.com/search?phrase="+q,
+  apple:q=>"https://tv.apple.com/fr/search?term="+q,
+  canal:q=>"https://www.google.com/search?q="+q+"+site%3Acanalplus.com",
+  autre:q=>"https://www.google.com/search?q="+q+"+streaming"
+};
+const GENRES = {anime:"Anime",animation:"Animation",action:"Action",aventure:"Aventure",comedie:"Comédie",romance:"Romance",drame:"Drame",thriller:"Thriller",horreur:"Horreur",sf:"Science-fiction",fantasy:"Fantasy",policier:"Policier",docu:"Docu",historique:"Historique",famille:"Famille",sport:"Sport"};
+const MOODS = {chill:"calme",cosy:"cosy",feel:"feel-good",rire:"rire",frisson:"frissons",epic:"épique",romance:"romantique",reflexion:"qui fait réfléchir"};
+const HUMEURS = {
+  none:{l:"Peu importe",m:{}},
+  rire:{l:"Besoin de rire",m:{rire:2}},
+  fatigue:{l:"Fatigué",m:{chill:1.2,cosy:1.2,frisson:-1,reflexion:-.8},energy:0},
+  action:{l:"Envie d'action",m:{epic:2}},
+  emotion:{l:"Envie d'émotion",m:{feel:1.6,romance:.6,reflexion:.4}},
+  reflexion:{l:"Envie de réfléchir",m:{reflexion:2}},
+  frisson:{l:"Envie de frissons",m:{frisson:2}}
+};
+
+// Âge conseillé (signalétique France / plateformes, indicatif)
+const AGE={"Stranger Things":12,"Arcane":12,"Squid Game":16,"Lupin":12,"La Casa de Papel":16,"Dark":16,"Mercredi":12,"La Chronique des Bridgerton":16,"Emily in Paris":12,"Sex Education":16,"Brooklyn Nine-Nine":10,"One Piece (live action)":12,"The Witcher":16,"Notre planète":0,"Headspace : Guide du sommeil":0,"Chef's Table":0,"Le Jeu de la dame":12,"Adolescence":16,"Death Note":12,"Cyberpunk: Edgerunners":18,"Blue Eye Samurai":18,"Castlevania":16,"Violet Evergarden":10,"Le Voyage de Chihiro":6,"Mon voisin Totoro":0,"Le Château ambulant":6,"Kiki la petite sorcière":0,"Glass Onion":12,"Don't Look Up":12,"Nimona":6,"Klaus":0,"Extraction":16,
+"The Mandalorian":10,"Andor":12,"Loki":10,"The Bear":16,"Only Murders in the Building":12,"Shōgun":16,"How I Met Your Mother":10,"Modern Family":6,"Les Simpson":10,"Grey's Anatomy":12,"Percy Jackson":10,"Secrets des baleines":0,"Là-haut":0,"Vice-Versa 2":0,"Soul":0,"Coco":6,"WALL-E":0,"Encanto":0,"Avatar : la voie de l'eau":10,"Les Gardiens de la Galaxie":12,"Avengers: Endgame":12,"Deadpool & Wolverine":16,"Alien: Romulus":16,"Pauvres Créatures":16,
+"Frieren":10,"Jujutsu Kaisen":16,"Demon Slayer":12,"Solo Leveling":16,"Spy x Family":10,"Chainsaw Man":16,"Dan Da Dan":16,"One Piece":10,"L'Attaque des Titans":16,"Mob Psycho 100":12,"Horimiya":12,"Kaguya-sama: Love is War":12,"My Dress-Up Darling":16,"Laid-Back Camp":0,"Mushishi":10,"Les Carnets de l'apothicaire":12,"Kaiju No. 8":12,"Haikyu!!":6,"Blue Lock":10,"Vinland Saga":16,"Jujutsu Kaisen 0":12,
+"Le Bureau des Légendes":16,"Baron Noir":12,"Paris Police 1900":16,"Engrenages":16,"Hippocrate":12,"Validé":12,"The Boys":18,"Fallout":16,"Invincible":16,"Reacher":16,"LOL : qui rit, sort !":12,"Severance":16,"Ted Lasso":12,"Slow Horses":16,
+"Demon Slayer : La Forteresse Infinie":12,"Unabomber":16,"JoJo's Bizarre Adventure : Steel Ball Run":12,"American Horror Story":16,"The Drop : une saga Snowfall":16,"The Love Hypothesis":12,"Until Dawn":16,"Brothers":12,"Hurlevent":12,"Nuremberg":12,"Overgeared":12,"Mononoké, chapitre III : La Malédiction du serpent":12,"Le Problème final":12};
+function guessAge(g){ if(g.includes("horreur")) return 16; if(g.includes("famille")) return 0; if(g.includes("thriller")||g.includes("policier")) return 12; if(g.includes("animation")) return 6; return 10; }
+const openRes=new Set();
+const moreLink=t=>`<a class="more" href="https://www.allocine.fr/rechercher/?q=${encodeURIComponent(t.n)}" target="_blank" rel="noopener">Plus d'infos sur AlloCiné ↗</a>`;
+function synBlock(t){
+  const kind=t.t==="film"?`Film de ${fmt(t.d)}`:`${t.t==="anime"?"Anime":"Série"}, épisodes de ${t.d} min`;
+  const moods=t.m.map(m=>MOODS[m]).join(", ");
+  return `<div class="syn" id="syn-${hash(t.id).toString().slice(2)}">
+    ${t.res?`<p class="syntxt">${esc(t.res)}</p>`:`<p class="syntxt none">Pas encore de résumé pour ce titre.</p>`}
+    <div class="synfacts"><span>${kind}</span><span>${ageTxt(t.age)}</span><span>Ambiance : ${moods}</span></div>
+    ${moreLink(t)}
+  </div>`;
+}
+const ageTxt=a=>a<=0?"tous publics":`dès ${a} ans`;
+function mkTitle([n,p,t,g,d,i,m,x],src){
+  x=x||{}; const gg=[...g];
+  if(t==="anime"||x.anime) gg.unshift("anime");
+  if(x.a) gg.unshift("animation");
+  const G=[...new Set(gg)];
+  return {n,p,t,g:G,d,i,m,big:!!x.big,nw:x.nw||null,src,id:n,age:x.age??AGE[n]??guessAge(G),res:x.res||RES[n]||null};
+}
+let C=[], IDX=new Map();
+function buildCatalog(){
+  const gone=new Set(RETIRES);
+  const base=BASE.map(r=>mkTitle(r,"base"));
+  const names=new Set(base.map(t=>t.n));
+  const auto=AUTO.filter(r=>!names.has(r[0])).map(r=>mkTitle(r,"auto"));
+  const custom=(S.custom||[]).map(u=>{ const g=[...new Set([...(u.t==="anime"?["anime"]:[]),...u.g])]; return {...u,src:"custom",id:"u:"+u.n,g,age:u.age??guessAge(g),res:u.res||RES[u.n]||null}; });
+  C=[...base,...auto].filter(t=>!gone.has(t.n)).concat(custom);
+  IDX=new Map(C.map((t,i)=>[t.id,i]));
+  $("aList").innerHTML=C.map(t=>`<option value="${esc(t.n)}"></option>`).join("");
+}
+const T=id=>C[IDX.get(id)];
+const tIdx=id=>IDX.has(id)?IDX.get(id):-1;
+
+const CTX = {
+  train:{l:"Train",s:"trajet, casque",time:120,energy:2,screen:"phone",moods:{rire:1,epic:1,feel:.8,chill:.3},types:{serie:.8,anime:1,film:.2},tip:"<b>Télécharge avant de partir</b> : les tunnels et les zones blanches coupent le réseau. Les épisodes courts sont faciles à caler entre deux gares."},
+  avion:{l:"Avion",s:"long vol, hors-ligne",time:240,energy:2,screen:"phone",moods:{epic:1,feel:1,rire:.8,frisson:-.6},types:{film:1,serie:.5,anime:.5},tip:"<b>Hors-ligne obligatoire</b> : télécharge en Wi-Fi la veille. Sur Disney+, l'offre avec pub ne permet pas le téléchargement ; sur Crunchyroll, il faut Mega Fan ou plus."},
+  sieste:{l:"Sieste",s:"aprèm, à la maison",time:40,energy:0,screen:"tablet",moods:{chill:1.6,cosy:1.5,frisson:-2.2,epic:-1},types:{serie:.6,anime:.6,film:-.5},maxI:1,tip:"<b>Du calme, rien à rater</b> : un truc doux que tu peux lâcher en t'endormant sans perdre le fil."},
+  amoureux:{l:"En amoureux",s:"soirée à deux",time:130,energy:1,screen:"tv",moods:{romance:1.6,feel:1,rire:.8,frisson:.3,cosy:.4},types:{film:1.2,serie:.2,anime:.1},tip:"<b>Un film complet</b> vaut souvent mieux qu'une série : pas de débat sur « encore un épisode ». Active le mode à deux pour tenir compte de ses goûts."},
+  famille:{l:"En famille",s:"tous ensemble, télé",time:110,energy:1,screen:"tv",moods:{feel:1.4,rire:1.2,cosy:.8,epic:.7,frisson:-1.2,romance:-.4,reflexion:-.2},types:{film:1.2,serie:.3,anime:.3},tip:"<b>Adapté à tout le monde</b> : l'appli écarte ce qui est déconseillé au plus jeune de la famille. Règle les âges dans « Famille » juste au-dessus."},
+  potes:{l:"Entre potes",s:"soirée, canapé",time:150,energy:2,screen:"tv",moods:{rire:1.5,frisson:1,epic:1,reflexion:-.6},types:{film:1,serie:.2,anime:.3},tip:"<b>Ça doit se suivre en parlant</b> : action, rire ou frissons. Pas d'accord ? Lance un vote entre potes."},
+  repas:{l:"Pendant le repas",s:"déj, 20–30 min",time:30,energy:1,screen:"tablet",moods:{rire:1.5,cosy:1,frisson:-1},types:{serie:1,anime:1,film:-1.5},maxI:2,tip:"<b>Format court et léger</b> : un épisode de 20–30 min, facile à suivre en mangeant."},
+  tranquille:{l:"Soirée tranquille",s:"seul, canapé",time:110,energy:1,screen:"tv",moods:{feel:.8,rire:.8,epic:.7,reflexion:.4},types:{film:.6,serie:.8,anime:.8},tip:"<b>Soirée pour toi</b> : bon moment pour avancer une série en cours ou tester un film de ta liste « À voir plus tard »."},
+  nuit:{l:"Tard le soir",s:"au lit, pas sommeil",time:45,energy:0,screen:"phone",moods:{chill:1.2,cosy:1.2,feel:.6,frisson:-1.6,epic:-.4},types:{serie:.6,anime:.8,film:-.3},maxI:2,tip:"<b>Pas trop de suspense</b> : sinon c'est « encore un » jusqu'à 3 h du matin."},
+  binge:{l:"Dimanche binge",s:"pluie, plaid",time:300,energy:2,screen:"tv",moods:{epic:1,cosy:1,reflexion:.6,feel:.6},types:{serie:1.2,anime:1.2,film:.2},tip:"<b>Le moment de lancer une saison entière</b> : c'est le jour pour les séries qui demandent de l'attention."}
+};
+const ENERGY = ["Crevé","Tranquille","En forme","À fond"];
+const SCREENS = {phone:"Téléphone",tablet:"Tablette / PC",tv:"Télé"};
+const JOURS=["dimanche","lundi","mardi","mercredi","jeudi","vendredi","samedi"];
+
+function autoCtx(d){
+  const day=d.getDay(), h=d.getHours()+d.getMinutes()/60, we=day===0||day===6;
+  if(h<6||h>=23.5) return "nuit";
+  if(!we&&((h>=6.5&&h<9.5)||(h>=17&&h<19))) return "train";
+  if(h>=11.5&&h<14) return "repas";
+  if(h>=14&&h<17.5) return day===0?"binge":"sieste";
+  if(day===0&&h>=9.5&&h<19) return "binge";
+  if(h>=19&&(day===5||day===6)) return "potes";
+  return "tranquille";
+}
+
+const KEY="zappeur.v1";
+const DEFAULT = ()=>({
+  plats:{netflix:true,disney:true,crunchy:true,canal:true,prime:false,apple:false},
+  g:{anime:2,action:1,comedie:1,sf:1}, gSample:true,
+  m:{}, ctxL:{}, seen:{}, watching:{}, ratings:{}, wish:{}, custom:[],
+  ctx:"train", time:120, energy:2, screen:"phone", humeur:"none", auto:true,
+  duo:{on:false,name:"",g:{}}, dl:{}, fam:[{n:"Moi",age:30}]
+});
+let S; try{ S=JSON.parse(localStorage.getItem(KEY))||DEFAULT(); }catch(e){ S=DEFAULT(); }
+S=Object.assign(DEFAULT(),S); if(!Array.isArray(S.fam)||!S.fam.length) S.fam=[{n:"Moi",age:30}]; S.duo=Object.assign({on:false,name:"",g:{}},S.duo);
+let seed=1, later=new Set();
+const save=()=>{ try{ localStorage.setItem(KEY,JSON.stringify(S)); }catch(e){} };
+const $=id=>document.getElementById(id);
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+function hash(s){let h=2166136261;for(const ch of s){h^=ch.charCodeAt(0);h=Math.imul(h,16777619);}return (h>>>0)%1000/1000;}
+const fmt=m=>m>=60?`${Math.floor(m/60)} h${m%60?String(m%60).padStart(2,"0"):""}`:`${m} min`;
+const daysSince=iso=>iso?(Date.now()-new Date(iso+"T12:00:00").getTime())/864e5:999;
+const isNew=t=>t.nw&&daysSince(t.nw)<=21;
+const platOn=p=>p==="autre"||!!S.plats[p];
+const openLink=t=>`<a class="open" href="${(SEARCH[t.p]||SEARCH.autre)(encodeURIComponent(t.n))}" target="_blank" rel="noopener">Ouvrir sur ${PLATS[t.p].n} ↗</a>`;
+
+const youngest=()=>Math.min(...S.fam.map(f=>f.age));
+const inFam=()=>S.ctx==="famille";
+let autoNote="";
+if(S.auto){ const now=new Date(), c=autoCtx(now); S.ctx=c; S.time=CTX[c].time; S.energy=CTX[c].energy; S.screen=CTX[c].screen;
+  autoNote=`${JOURS[now.getDay()]} ${now.getHours()} h ${String(now.getMinutes()).padStart(2,"0")} → <b>${CTX[c].l}</b>`; }
+
+/* ---------- algo ---------- */
+function score(t){
+  const c=CTX[S.ctx], H=HUMEURS[S.humeur]||HUMEURS.none; let s=0; const r=[];
+  let gBest=null,gWorst=null;
+  for(const g of t.g){ const w=S.g[g]||0; s+=w*.9; if(w>=1.5&&!gBest) gBest=g; if(w<=-1.5&&!gWorst) gWorst=g; }
+  // à deux
+  if(S.duo.on){
+    let both=null, no=null;
+    for(const g of t.g){ const pw=S.duo.g[g]||0; s+=pw*.8; if(pw<=-1.5){ s-=1; if(!no) no=g; } if(pw>=1.5&&(S.g[g]||0)>=1.5&&!both) both=g; }
+    const nm=S.duo.name||"l'autre";
+    if(both) { r.push(["pos",`vous aimez tous les deux : ${GENRES[both].toLowerCase()}`]); gBest=null; }
+    if(no) r.push(["neg",`${nm} n'aime pas trop : ${GENRES[no].toLowerCase()}`]);
+  }
+  if(gBest) r.push(["pos",`tu aimes : ${GENRES[gBest].toLowerCase()}`]);
+  if(gWorst) r.push(["neg",`${GENRES[gWorst].toLowerCase()}, pas trop ton truc`]);
+  const learned=S.ctxL[S.ctx]||{}; let mBest=null,mv=0, hHit=null;
+  for(const m of t.m){
+    const hv=(H.m[m]||0)*1.2;
+    const v=(c.moods[m]||0)*1.1+hv+(learned[m]||0)*.7+(S.m[m]||0)*.4;
+    s+=v; if(v>mv){mv=v;mBest=m;} if(hv>=1.5) hHit=m;
+    if((c.moods[m]||0)+(H.m[m]||0)<=-1) r.push(["neg",`${MOODS[m]}, pas idéal là`]);
+  }
+  if(hHit) r.push(["pos",`colle à ton humeur : ${MOODS[hHit]}`]);
+  else if(mBest&&mv>=.8) r.push(["pos",`${MOODS[mBest]}${(learned[mBest]||0)>=.5?" (tu kiffes ça ici)":""}`]);
+  s+=c.types[t.t]||0;
+  if(t.t==="film"){
+    if(t.d<=S.time){ s+=1; r.push(["pos",`${fmt(t.d)}, ça tient`]); }
+    else { const o=t.d-S.time; s-=o/25; if(o>10) r.push(["neg",`dépasse de ${fmt(o)}`]); }
+  } else {
+    if(t.d<=S.time){ const n=Math.floor(S.time/t.d); s+=.8+(n>=2?.3:0); r.push(["pos",n>=2?`${Math.min(n,99)} épisodes dans ton temps`:`1 épisode pile`]); }
+    else { s-=1.6; r.push(["neg","épisode trop long"]); }
+  }
+  const en=S.energy;
+  if(t.i>en+1){ s-=(t.i-en-1)*1.5; r.push(["neg","demande de la concentration"]); }
+  else if(en===0&&t.i===1){ s+=.5; }
+  if(c.maxI&&t.i>c.maxI) s-=1.4;
+  if(t.big&&S.screen==="phone"){ s-=.7; r.push(["neg","mieux sur grand écran"]); }
+  if(t.big&&S.screen==="tv"){ s+=.5; r.push(["pos","à voir en grand"]); }
+  if(inFam()){ const y=youngest();
+    if(y<16) r.unshift(["pos",`OK pour tous : ${ageTxt(t.age)}`]);
+    if(y<10){ if(t.g.includes("famille")) s+=1.5; if(t.g.includes("animation")) s+=1; if(t.g.includes("docu")) s+=.4; if(t.i>=3) s-=1; }
+    else if(y<14){ ["aventure","comedie","famille"].forEach(g=>{ if(t.g.includes(g)) s+=.5; }); }
+  }
+  if(S.wish[t.id]){ s+=1.2; r.unshift(["pos","dans ta liste À voir"]); }
+  if(isNew(t)){ s+=.4; r.push(["pos","nouveauté"]); }
+  s+=hash(t.id+seed)*.9;
+  return {s,r};
+}
+function ranked(){
+  const y=inFam()?youngest():99;
+  return C.filter(t=>platOn(t.p)&&!S.seen[t.id]&&!S.watching[t.id]&&!later.has(S.ctx+"|"+t.id)&&t.age<=y)
+    .map(t=>({t,...score(t)})).sort((a,b)=>b.s-a.s);
+}
+const pctOf=s=>Math.round(100/(1+Math.exp(-(s-2.5)/2.2)));
+
+/* ---------- rendu : réglages ---------- */
+function renderPlats(){
+  $("plats").innerHTML=SUBS.map(k=>{const p=PLATS[k];return `<button class="plat" data-p="${k}" aria-pressed="${!!S.plats[k]}"><span class="dot" style="background:${p.c}"></span>${p.n}</button>`;}).join("");
+}
+function renderCtx(){
+  $("autoBtn").setAttribute("aria-pressed",S.auto);
+  $("autoInfo").innerHTML=S.auto&&autoNote?`Choisi d'après l'heure : ${autoNote}`:"";
+  $("ctxs").innerHTML=Object.entries(CTX).map(([k,c],i)=>`<button class="ctx" data-c="${k}" aria-pressed="${S.ctx===k}" aria-keyshortcuts="${(i+1)%10}"><span class="ch">CH ${String(i+1).padStart(2,"0")}</span><b>${c.l}</b><small>${c.s}</small></button>`).join("");
+  $("time").value=S.time; $("timeOut").textContent=fmt(+S.time);
+  $("energy").innerHTML=ENERGY.map((e,i)=>`<button data-e="${i}" aria-pressed="${S.energy===i}">${e}</button>`).join("");
+  $("screen").innerHTML=Object.entries(SCREENS).map(([k,v])=>`<button data-scr="${k}" aria-pressed="${S.screen===k}">${v}</button>`).join("");
+  $("humeur").innerHTML=Object.entries(HUMEURS).map(([k,h])=>`<button data-h="${k}" aria-pressed="${S.humeur===k}">${h.l}</button>`).join("");
+  $("duoBtn").setAttribute("aria-pressed",S.duo.on);
+  $("duoTxt").textContent=S.duo.on?`À deux avec ${S.duo.name||"quelqu'un"}`:"Mode à deux";
+  $("sv-time").textContent=fmt(+S.time); $("sv-energy").textContent=ENERGY[S.energy]; $("sv-screen").textContent=SCREENS[S.screen];
+  $("sv-humeur").textContent=HUMEURS[S.humeur].l; $("sv-duo").textContent=S.duo.on?`Avec ${S.duo.name||"quelqu'un"}`:"Désactivé";
+  const fam=inFam(); document.querySelector('[data-set="fam"]').hidden=!fam; document.querySelector('[data-set="duo"]').hidden=fam;
+  if(!fam&&SET==="fam") openSet(null); if(fam&&SET==="duo") openSet(null);
+  $("sv-fam").textContent=`${S.fam.length} pers. · ${ageTxt(youngest())}`;
+  renderFam();
+}
+
+function renderFam(){
+  const y=youngest();
+  $("famList").innerHTML=S.fam.map((f,i)=>`<div class="famrow"><span class="famname">${esc(f.n||"Membre "+(i+1))}</span>
+    <span class="famage"><button class="mini" data-fage="${i}" data-d="-1" aria-label="Moins un an">−</button><b class="mono">${f.age} ans</b><button class="mini" data-fage="${i}" data-d="1" aria-label="Plus un an">+</button></span>
+    ${S.fam.length>1?`<button class="jdel" data-frm="${i}">Retirer</button>`:"<span></span>"}</div>`).join("");
+  const n=C.filter(t=>platOn(t.p)&&t.age<=y).length;
+  $("famInfo").innerHTML=`Le plus jeune a <b>${y} an${y>1?"s":""}</b> : l'appli ne propose que des titres adaptés à cet âge (${n} titres dispo avec tes abonnements).`;
+}
+
+/* ---------- rendu : suggestions ---------- */
+function renderList(){
+  const c=CTX[S.ctx];
+  $("resTitle").textContent=`${c.l} · ${fmt(+S.time)}`;
+  $("tip").innerHTML=c.tip+(S.humeur!=="none"?` Humeur : <b>${HUMEURS[S.humeur].l.toLowerCase()}</b>.`:"");
+  const recs=ranked().slice(0,6);
+  if(!recs.length){ $("list").innerHTML=`<div class="empty">Plus rien à proposer avec ces abonnements. Active une plateforme ou ajoute un titre.</div>`; renderProg(); return; }
+  $("list").innerHTML=recs.map((x,i)=>{
+    const t=x.t, p=PLATS[t.p], pct=pctOf(x.s);
+    const kind=t.t==="film"?`Film · ${fmt(t.d)}`:`${t.t==="anime"?"Anime":"Série"} · ${t.d} min / ép.`;
+    const why=x.r.slice(0,5).map(([k,v])=>`<span class="${k}">${esc(v)}</span>`).join("");
+    const w=!!S.wish[t.id];
+    return `<article class="card${i===0?" top":""}">
+      <div class="rank mono">${i+1}</div>
+      <div>
+        <div class="ctitle"><h3>${esc(t.n)}</h3>${isNew(t)?`<span class="badge">Nouveau</span>`:""}${w?`<span class="badge wish">À voir</span>`:""}</div>
+        <div class="meta"><span class="pl"><span class="dot" style="background:${p.c}"></span>${p.n}</span><span>${kind}</span><span>${t.g.filter(g=>g!=="anime"&&g!=="animation").slice(0,2).map(g=>GENRES[g]).join(", ")}</span><span class="agetag" title="Âge conseillé">${t.age<=0?"Tous publics":t.age+" ans +"}</span></div>
+        <div class="match"><div class="bar"><i style="width:${pct}%"></i></div><span class="mono" style="font-size:12.5px">${pct}% ${inFam()?"pour la famille":S.duo.on?"pour vous deux":"pour toi"}</span></div>
+        <div class="why">${why}</div>
+        ${openRes.has(t.id)?synBlock(t):""}
+      </div>
+      <div class="acts">
+        <button class="watch" data-a="watch" data-id="${esc(t.id)}">Je regarde</button>
+        <button class="resb" data-res="${esc(t.id)}" aria-expanded="${openRes.has(t.id)}">${openRes.has(t.id)?"Masquer le résumé":"Résumé"}</button>
+        <button class="wishb" data-a="wish" data-id="${esc(t.id)}" aria-pressed="${w}">${w?"Dans ma liste":"+ À voir plus tard"}</button>
+        <button class="later" data-a="later" data-id="${esc(t.id)}">Pas ici</button>
+        ${openLink(t)}
+      </div>
+    </article>`;
+  }).join("");
+  renderProg();
+}
+
+/* ---------- programme de trajet ---------- */
+let progSeed=0;
+function buildPlan(){
+  let rem=S.time; const plan=[];
+  const resume=Object.entries(S.watching).map(([id,w])=>({t:T(id),w})).filter(x=>x.t&&x.t.t!=="film"&&platOn(x.t.p));
+  const pool=ranked().slice(progSeed%3, 20+progSeed%3).map(x=>({t:x.t}));
+  for(const c of [...resume,...pool]){
+    if(plan.length>=3||rem<18) break;
+    const t=c.t;
+    if(plan.some(p=>p.t.id===t.id)) continue;
+    if(t.t==="film"){ if(t.d<=rem){ plan.push({t,n:1,min:t.d}); rem-=t.d; } }
+    else { let n=Math.min(Math.floor(rem/t.d), c.w?6:4); if(n>=1){ plan.push({t,n,min:n*t.d,resume:c.w}); rem-=n*t.d; } }
+  }
+  return plan;
+}
+function renderProg(){
+  const plan=buildPlan(), tot=plan.reduce((a,p)=>a+p.min,0), off=["train","avion"].includes(S.ctx);
+  const show=S.time>=60&&plan.length>0;
+  $("progTab").hidden=!show; $("progTab").textContent=off?"Programme du trajet":"Programme";
+  if(!show){ if(VIEW==="prog") showView("sugg"); return; }
+  $("progZone").innerHTML=`<div class="reshead"><h3>Ton programme pour ${fmt(+S.time)}</h3><button class="ghost" id="progShuffle">Autre programme</button></div>
+    <div class="tl" aria-hidden="true">${plan.map(p=>`<span style="width:${p.min/S.time*100}%;background:${PLATS[p.t.p].c}">${esc(p.t.n)}</span>`).join("")}</div>
+    <div class="jmeta" style="font-size:12.5px">${fmt(tot)} de visionnage, ${fmt(Math.max(0,S.time-tot))} de marge.${off?" Coche chaque titre une fois téléchargé.":""}</div>
+    <ul class="pitems">${plan.map((p,i)=>{
+      const w=p.resume, lab=p.t.t==="film"?`${esc(p.t.n)} <span class="jmeta">film</span>`:`${esc(p.t.n)} <span class="jmeta">${p.n} ép.${w?` à partir de S${w.s} ép. ${w.e}`:""}</span>`;
+      const k="dl-"+p.t.id, done=!!S.dl[k];
+      return `<li class="${off&&done?"done":""}">${off?`<input type="checkbox" id="dl${i}" data-dl="${esc(k)}" ${done?"checked":""}>`:`<span class="mono">${i+1}</span>`}<label ${off?`for="dl${i}"`:""}>${lab}</label><span class="mono">${fmt(p.min)} · ${PLATS[p.t.p].n}</span></li>`;
+    }).join("")}</ul>`;
+}
+
+/* ---------- en cours + épisodes ---------- */
+const STAR_TXT=["","Nul","Bof","Correct","Très bien","Coup de cœur"];
+const draft={};
+const STAR_PATH='<path d="M12 3.2l2.6 5.5 6 .8-4.4 4.2 1.1 6-5.3-2.9-5.3 2.9 1.1-6-4.4-4.2 6-.8z"/>';
+const starIcon=on=>`<svg class="st${on?" on":""}" viewBox="0 0 24 24" aria-hidden="true">${STAR_PATH}</svg>`;
+const starStr=n=>`<span class="srow" role="img" aria-label="${n} sur 5">${[1,2,3,4,5].map(i=>starIcon(i<=n)).join("")}</span>`;
+let popStar=0;
+const starPicker=(n,attr,extra="")=>{ const p=popStar; popStar=0; return `<div class="picker" role="radiogroup" aria-label="Note sur 5">${[1,2,3,4,5].map(i=>`<button role="radio" aria-checked="${i===n}" ${attr}="${i}" ${extra} class="pk${i<=n?" on":""}${i===p?" pop":""}" aria-label="${i} étoile${i>1?"s":""}, ${STAR_TXT[i]}"><svg viewBox="0 0 24 24" aria-hidden="true">${STAR_PATH}</svg></button>`).join("")}<span class="pkhint${n?" set":""}">${n?STAR_TXT[n]:"Touche une étoile"}</span></div>`; };
+const dFmt=ts=>new Date(ts).toLocaleDateString("fr-FR",{day:"numeric",month:"short"});
+function renderNow(){
+  const ids=Object.keys(S.watching).filter(id=>tIdx(id)>=0);
+  ids.sort((a,b)=>{const fa=T(a).d<=S.time?0:1, fb=T(b).d<=S.time?0:1; return fa-fb;});
+  $("nowEmpty").hidden=!!ids.length; $("nowCount").textContent=ids.length?`${ids.length} titre${ids.length>1?"s":""}`:"";
+  $("cSeries").hidden=!ids.length; $("cSeries").textContent=ids.length;
+  const best=ids.map(id=>T(id)).find(t=>t.t!=="film"&&t.d<=S.time&&platOn(t.p));
+  if(best){ const w=S.watching[best.id], n=Math.floor(S.time/best.d); $("resume").hidden=false;
+    $("resume").innerHTML=`<span class="label">Reprendre</span><b>${esc(best.n)}</b><span class="mono">S${w.s||1} · ép. ${w.e||1}</span><span class="fit">${n} ép. tiennent dans tes ${fmt(+S.time)}</span><span class="go">Mes séries →</span>`; }
+  else $("resume").hidden=true;
+  $("now").innerHTML=ids.map(id=>{
+    const t=T(id), w=S.watching[id], p=PLATS[t.p], d=draft[id]||{}, k=tIdx(id);
+    let epHtml="";
+    if(t.t!=="film"){
+      w.s=w.s||1; w.e=w.e||1;
+      const n=Math.floor(S.time/t.d);
+      epHtml=`<div class="ep">
+        <span class="epnum mono">S${w.s} · ép. ${w.e}</span>
+        <button class="mini" data-ep="1" data-id="${esc(id)}">+1 épisode vu</button>
+        <button class="mini" data-ep="-1" data-id="${esc(id)}" aria-label="Épisode précédent">−1</button>
+        <button class="mini" data-season="1" data-id="${esc(id)}">Saison suivante</button>
+        <label class="eptot">sur <input type="number" min="1" max="2000" id="tot${k}" data-tot="${esc(id)}" value="${w.tot||""}" placeholder="?"> ép.</label>
+        <span class="fit${n>=1?"":" no"}">${n>=1?`▶ ${n} ép. tiennent dans tes ${fmt(+S.time)}`:"épisode plus long que ton temps"}</span>
+      </div>${w.tot?`<div class="pbar"><i style="width:${clamp((w.e-1)/w.tot*100,0,100)}%"></i></div>`:""}`;
+    }
+    let body;
+    if(d.open){
+      const n=d.n||0;
+      body=`<div class="rate">
+        ${starPicker(n,"data-star",`data-id="${esc(id)}"`)}
+        <textarea id="com${k}" data-com="${esc(id)}" placeholder="Ton avis en quelques mots (facultatif)…">${esc(d.com||"")}</textarea>
+        <div class="row"><button class="btn primary" data-save="${esc(id)}">Enregistrer ma note</button><button class="btn" data-cancel="${esc(id)}">Plus tard</button></div>
+      </div>`;
+    } else {
+      body=`<div class="row"><button class="btn primary" data-finish="${esc(id)}">${t.t==="film"?"Je l'ai vu, je note":"J'ai fini, je note"}</button><button class="btn" data-drop="${esc(id)}">Retirer</button></div>`;
+    }
+    return `<div class="wcard">
+      <div class="wtop"><div><span class="live">En cours</span><h3>${esc(t.n)}</h3></div>
+      <div class="meta"><span class="pl"><span class="dot" style="background:${p.c}"></span>${p.n}</span><span>lancé en mode ${CTX[w.ctx]?.l.toLowerCase()||"?"}, le ${dFmt(w.at)}</span></div></div>
+      ${epHtml}${body}</div>`;
+  }).join("");
+}
+
+/* ---------- à voir plus tard ---------- */
+function renderWish(){
+  const ids=Object.keys(S.wish).filter(id=>tIdx(id)>=0).sort((a,b)=>S.wish[b]-S.wish[a]);
+  $("wishCount").textContent=ids.length?`${ids.length} titre${ids.length>1?"s":""}`:"";
+  $("wish").innerHTML=ids.length?ids.map(id=>{
+    const t=T(id), fits=t.d<=S.time;
+    return `<div class="witem"><div class="jhead"><b>${esc(t.n)}</b><span class="jmeta">${PLATS[t.p].n}</span></div>
+      <div class="jmeta">${t.t==="film"?`film · ${fmt(t.d)}`:`${t.d} min / ép.`} · ${fits?`<span class="fit">tient dans ton temps</span>`:"trop long pour maintenant"}${platOn(t.p)?"":" · plateforme désactivée"}</div>
+      <details class="wsyn"><summary>Résumé</summary>${synBlock(t)}</details>
+      <div class="row"><button class="btn" data-wwatch="${esc(id)}">Je regarde</button><button class="btn" data-wrm="${esc(id)}">Retirer</button></div></div>`;
+  }).join(""):`<p>Vide pour l'instant. Touche « + À voir plus tard » sur une suggestion : l'algo la remontera quand le moment s'y prête.</p>`;
+}
+
+/* ---------- goûts, à deux, appris ---------- */
+const triState=w=>w>=1?1:w<=-1?-1:0;
+function chips(obj,attr){ return Object.entries(GENRES).map(([k,v])=>{const st=triState(obj[k]||0);return `<button class="g" ${attr}="${k}" data-st="${st}" aria-label="${v} : ${st===1?"adore":st===-1?"n'aime pas":"neutre"}">${v}</button>`;}).join(""); }
+function renderProfile(){
+  $("genres").innerHTML=chips(S.g,"data-g");
+  $("profileNote").innerHTML=(S.gSample?"<b>Profil d'exemple</b>, modifie-le. ":"")+"Touche un genre : une fois = j'adore, deux fois = pas pour moi, trois fois = neutre.";
+  $("duoGenres").innerHTML=chips(S.duo.g,"data-dg");
+  if(document.activeElement!==$("duoName")) $("duoName").value=S.duo.name||"";
+  const L=S.ctxL[S.ctx]||{}, c=CTX[S.ctx];
+  const rows=Object.keys(MOODS).map(m=>[m,(c.moods[m]||0)+(L[m]||0)+(S.m[m]||0)*.5]);
+  $("learn").innerHTML=`<div class="label">Ambiances visées · ${c.l}</div>`+rows.map(([m,v])=>{
+    const w=clamp(Math.abs(v)/3,0,1)*50;
+    const style=v>=0?`left:50%;width:${w}%;background:var(--good)`:`right:50%;width:${w}%;background:var(--bad)`;
+    return `<div class="lrow"><span>${MOODS[m]}</span><div class="lbar"><i style="${style}"></i></div><span class="mono" style="font-size:12px;text-align:right">${v>0?"+":""}${v.toFixed(1)}</span></div>`;
+  }).join("");
+  const E=Object.entries(L), top=E.sort((a,b)=>b[1]-a[1])[0], low=[...E].sort((a,b)=>a[1]-b[1])[0];
+  let ins;
+  if(top&&top[1]>=.5) ins=`En mode <b>${c.l.toLowerCase()}</b>, tu reviens souvent vers le <b>${MOODS[top[0]]}</b>.`+(low&&low[1]<=-.5?` Moins de <b>${MOODS[low[0]]}</b>.`:"");
+  else if(low&&low[1]<=-.5) ins=`En mode <b>${c.l.toLowerCase()}</b>, tu évites le <b>${MOODS[low[0]]}</b>.`;
+  else ins=`Pas encore assez de notes en mode <b>${c.l.toLowerCase()}</b>. Note quelques titres et l'algo s'adapte à ce moment précis.`;
+  $("insight").innerHTML=ins;
+  const R=Object.values(S.ratings), avg=R.length?(R.reduce((a,r)=>a+r.n,0)/R.length).toFixed(1).replace(".",","):"–";
+  $("stats").innerHTML=`<span><b class="mono">${R.length}</b> notés</span><span>moyenne <b class="mono">${avg}</b>/5</span><span><b class="mono">${Object.keys(S.watching).length}</b> en cours</span><span><b class="mono">${(S.custom||[]).length}</b> ajoutés</span>`;
+  $("foot").textContent=`Catalogue : ${C.length} titres, mis à jour le ${new Date(CATALOGUE_MAJ+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"})}. Les titres changent de plateforme régulièrement, vérifie la dispo avant de lancer. Tes goûts sont gardés dans ce navigateur uniquement.`;
+}
+
+/* ---------- ajout d'un titre ---------- */
+const ADEF={film:110,serie:45,anime:24};
+let AZ="addZone";
+function closeAdd(){ ["addZone","addZone2"].forEach(z=>{ $(z).hidden=true; $(z).innerHTML=""; }); }
+function openAdd(mode,zone){
+  closeAdd(); AZ=zone; const Z=$(zone);
+  Z.hidden=false;
+  Z.innerHTML=`<div class="reshead"><h3>${mode==="rate"?"Noter un titre vu ailleurs":"Ajouter un titre"}</h3><button class="ghost" id="addClose">Fermer</button></div>
+    <div class="fgrid">
+      <div class="field" style="flex:1 1 220px"><label class="label" for="aName">Titre</label><input type="text" id="aName" list="aList" placeholder="Ex. : Blue Box, Dune 2…" maxlength="80"></div>
+      <div class="field"><label class="label" for="aPlat">Plateforme</label><select class="inp" id="aPlat">${Object.entries(PLATS).map(([k,p])=>`<option value="${k}">${p.n}</option>`).join("")}</select></div>
+      <div class="field"><div class="label">Format</div><div class="seg" id="aType">${Object.entries({film:"Film",serie:"Série",anime:"Anime"}).map(([k,v],i)=>`<button data-atype="${k}" aria-pressed="${i===2}">${v}</button>`).join("")}</div></div>
+      <div class="field"><label class="label" for="aDur" id="aDurLab">Durée d'un épisode (min)</label><input type="number" id="aDur" min="3" max="400" value="24" style="width:90px"></div>
+      <div class="field"><label class="label" for="aAge">Âge conseillé</label><select class="inp" id="aAge"><option value="">Je ne sais pas</option><option value="0">Tous publics</option><option value="6">6 ans et +</option><option value="10">10 ans et +</option><option value="12">12 ans et +</option><option value="16">16 ans et +</option><option value="18">18 ans et +</option></select></div>
+      <div class="field"><div class="label">Attention demandée</div><div class="seg" id="aInt">${["Légère","Normale","Forte"].map((v,i)=>`<button data-ai="${i+1}" aria-pressed="${i===1}">${v}</button>`).join("")}</div></div>
+    </div>
+    <div class="field" style="display:flex;flex-direction:column;gap:5px"><div class="label">Genres</div><div class="ck" id="aG">${Object.entries(GENRES).filter(([k])=>k!=="anime").map(([k,v])=>`<button data-ag="${k}" aria-pressed="false">${v}</button>`).join("")}</div></div>
+    <div class="field" style="display:flex;flex-direction:column;gap:5px"><div class="label">Ambiance</div><div class="ck" id="aM">${Object.entries(MOODS).map(([k,v])=>`<button data-am="${k}" aria-pressed="false">${v}</button>`).join("")}</div></div>
+    <div class="jmeta" id="aHint">Si le titre est déjà dans le catalogue, choisis-le dans la liste : les autres champs sont alors inutiles.</div>
+    <div class="row">
+      ${mode==="rate"?`<button class="btn primary" data-add="rate">Déjà vu, je le note</button><button class="btn" data-add="watch">Je le regarde</button>`:`<button class="btn primary" data-add="watch">Je le regarde</button><button class="btn" data-add="rate">Déjà vu, je le note</button>`}
+      <button class="btn" data-add="wish">À voir plus tard</button>
+      <button class="btn" data-add="only">Juste l'ajouter</button>
+    </div>`;
+  $("aName").addEventListener("input",()=>{ const ex=findByName($("aName").value); $("aHint").innerHTML=ex?`<b>${esc(ex.n)}</b> est déjà dans le catalogue (${PLATS[ex.p].n}) : les autres champs sont ignorés.`:"Nouveau titre : renseigne la plateforme, le format, les genres et l'ambiance pour que l'algo sache où le ranger."; });
+  $("aName").focus({preventScroll:true});
+}
+const findByName=n=>{ const q=norm(n.trim()); return q?C.find(t=>norm(t.n)===q):null; };
+function submitAdd(action){
+  const name=$("aName").value.trim();
+  if(!name){ toast("Écris d'abord le titre."); $("aName").focus(); return; }
+  let t=findByName(name);
+  if(!t){
+    const type=document.querySelector("#aType [aria-pressed=true]").dataset.atype;
+    const g=[...document.querySelectorAll("#aG [aria-pressed=true]")].map(b=>b.dataset.ag);
+    const m=[...document.querySelectorAll("#aM [aria-pressed=true]")].map(b=>b.dataset.am);
+    if(!g.length){ toast("Choisis au moins un genre."); return; }
+    const u={n:name.slice(0,80),p:$("aPlat").value,t:type,g,d:clamp(+$("aDur").value||ADEF[type],3,400),i:+document.querySelector("#aInt [aria-pressed=true]").dataset.ai,m:m.length?m:["feel"],big:false}; if($("aAge").value!=="") u.age=+$("aAge").value;
+    S.custom=(S.custom||[]).filter(x=>norm(x.n)!==norm(u.n)); S.custom.push(u);
+    buildCatalog(); t=T("u:"+u.n);
+  }
+  if(action==="watch"||action==="rate"){ S.watching[t.id]=S.watching[t.id]||{ctx:S.ctx,at:Date.now()}; if(action==="rate") draft[t.id]={open:true}; }
+  if(action==="wish") S.wish[t.id]=Date.now();
+  save(); closeAdd();
+  renderAll();
+  toast(action==="rate"?"Donne-lui une note juste au-dessus.":action==="watch"?`${t.n} est en cours.`:action==="wish"?`${t.n} ajouté à ta liste.`:`${t.n} ajouté au catalogue.`);
+  if(action==="watch"||action==="rate") showTab("series");
+}
+
+/* ---------- vote entre potes ---------- */
+let V=null;
+function renderVote(){
+  const z=$("voteZone"); if(!V){ z.innerHTML=""; return; }
+  if(V.step==="setup"){
+    z.innerHTML=`<div class="reshead"><h3>Vote entre potes</h3><button class="ghost" data-vclose="1">Fermer</button></div>
+      <p class="jmeta" style="font-size:13.5px;margin:0">L'algo garde les 5 meilleures idées du moment. Chacun vote à son tour sur ce téléphone : « partant » vaut 1 point, « mon préféré » en vaut 2.</p>
+      <div class="row" style="align-items:center"><input type="text" id="vName" placeholder="Prénom" maxlength="20" style="width:160px"><button class="btn" data-vadd="1">Ajouter</button></div>
+      <div class="names">${V.names.map((n,i)=>`<span>${esc(n)}<button data-vrm="${i}" aria-label="Retirer ${esc(n)}">×</button></span>`).join("")||`<span style="background:transparent;padding-left:0;color:var(--muted)">Ajoute au moins 2 personnes.</span>`}</div>
+      <div class="jmeta">Au vote : ${V.cand.map(id=>esc(T(id).n)).join(" · ")}</div>
+      <div class="row"><button class="btn primary" data-vstart="1" ${V.names.length<2?"disabled":""}>Commencer le vote (${V.names.length})</button></div>`;
+    const inp=$("vName"); inp.addEventListener("keydown",e=>{ if(e.key==="Enter"){ e.preventDefault(); addVoter(); } });
+  } else if(V.step==="vote"){
+    const who=V.names[V.i], b=V.ballot;
+    z.innerHTML=`<div class="reshead"><h3>Au tour de ${esc(who)}</h3><span class="label">${V.i+1} / ${V.names.length}</span></div>
+      <p class="jmeta" style="font-size:13.5px;margin:0">Passe le téléphone à ${esc(who)}. Les votes des autres restent cachés.</p>
+      <div>${V.cand.map(id=>{const t=T(id);return `<div class="vrow"><div><b>${esc(t.n)}</b><div class="jmeta">${PLATS[t.p].n} · ${t.t==="film"?fmt(t.d):t.d+" min / ép."}</div></div>
+        <button class="ok" data-vok="${esc(id)}" aria-pressed="${b.ok.has(id)}">Partant</button>
+        <button class="fv" data-vfav="${esc(id)}" aria-pressed="${b.fav===id}">★ Mon préféré</button></div>`;}).join("")}</div>
+      <div class="row"><button class="btn primary" data-vnext="1">${V.i+1<V.names.length?"Valider et passer":"Valider et voir le résultat"}</button></div>`;
+  } else {
+    const pts=V.cand.map(id=>[id,V.votes.reduce((a,v)=>a+(v.fav===id?2:v.ok.has(id)?1:0),0)]).sort((a,b)=>b[1]-a[1]);
+    const mx=Math.max(pts[0][1],1), win=pts[0][1]>0?pts.filter(p=>p[1]===pts[0][1]):[];
+    z.innerHTML=`<div class="reshead"><h3>${win.length===1?`Gagnant : ${esc(T(win[0][0]).n)}`:win.length>1?"Égalité !":"Personne n'est partant"}</h3><button class="ghost" data-vclose="1">Fermer</button></div>
+      <div style="display:flex;flex-direction:column;gap:6px">${pts.map(([id,p])=>`<div class="vres${win.some(w=>w[0]===id)?" win":""}"><b>${esc(T(id).n)}</b><div class="dbar"><i style="width:${p/mx*100}%;background:var(--accent)"></i></div><span class="mono">${p}</span></div>`).join("")}</div>
+      <div class="row">${win.length===1?`<button class="btn primary" data-vwatch="${esc(win[0][0])}">On regarde ça</button>`:""}${win.length>1?`<button class="btn primary" data-vtie="1">Départager au hasard</button>`:""}<button class="btn" data-vagain="1">Nouveau vote</button></div>`;
+  }
+}
+function addVoter(){ const n=$("vName").value.trim(); if(!n) return; if(V.names.length>=12){toast("12 personnes maximum.");return;} V.names.push(n.slice(0,20)); renderVote(); $("vName").focus(); }
+function startVote(){ V={step:"setup",names:V?.names||[],cand:ranked().slice(0,5).map(x=>x.t.id),i:0,votes:[]}; renderVote(); }
+
+/* ---------- apprentissage ---------- */
+function applyRating(t,n,ctx,sign){
+  const k=((n-3)/2)*sign, L=S.ctxL[ctx]=S.ctxL[ctx]||{};
+  t.g.forEach(g=>S.g[g]=clamp((S.g[g]||0)+k*.7,-3,3));
+  t.m.forEach(m=>{S.m[m]=clamp((S.m[m]||0)+k*.4,-3,3); L[m]=clamp((L[m]||0)+k*.7,-3,3);});
+}
+function saveRating(id){
+  const t=T(id), d=draft[id]||{};
+  if(!d.n){ toast("Choisis d'abord une note en étoiles."); return; }
+  const w=S.watching[id]||{}, ctx=w.ctx||S.ctx;
+  if(S.ratings[id]) applyRating(t,S.ratings[id].n,S.ratings[id].ctx,-1);
+  applyRating(t,d.n,ctx,1);
+  const min=t.t==="film"?t.d:Math.max(w.eps||0,1)*t.d;
+  S.ratings[id]={n:d.n,com:(d.com||"").trim().slice(0,600),ctx,at:Date.now(),min:(S.ratings[id]?.min||0)+min};
+  S.seen[id]=1; delete S.watching[id]; delete S.wish[id]; delete draft[id]; S.gSample=false; save();
+  renderAll();
+  const g=t.g.filter(x=>x!=="animation").slice(0,2).map(x=>GENRES[x].toLowerCase()).join(" et ");
+  toast(d.n>=4?`${d.n}★ noté. Plus de titres ${g} à l'avenir.`:d.n<=2?`${d.n}★ noté. L'algo baisse ce genre de titres.`:`3★ noté.`);
+}
+function startWatching(id){
+  S.watching[id]=S.watching[id]||{ctx:S.ctx,at:Date.now()};
+  save(); renderNow(); renderList(); renderWish(); renderProfile();
+  toast(`Bon visionnage ! Retrouve-le dans « Mes séries » pour suivre et noter.`);
+}
+
+let tt; function toast(m){ const e=$("toast"); e.textContent=m; e.classList.add("on"); clearTimeout(tt); tt=setTimeout(()=>e.classList.remove("on"),2400); }
+
+/* ---------- journal + bilan ---------- */
+const JU={q:"",group:"note",sort:"recent",plat:"all",com:"all",star:0};
+try{ Object.assign(JU,JSON.parse(localStorage.getItem(KEY+".jui"))||{}); JU.q=""; }catch(e){}
+const saveJU=()=>{ try{ localStorage.setItem(KEY+".jui",JSON.stringify({group:JU.group,sort:JU.sort})); }catch(e){} };
+let jedit=null, bMonth=null;
+const TIERS={5:"Coups de cœur",4:"Très bien",3:"Correct",2:"Bof",1:"À oublier"};
+const cap=s=>s[0].toUpperCase()+s.slice(1);
+const MONTH=ts=>cap(new Date(ts).toLocaleDateString("fr-FR",{month:"long",year:"numeric"}));
+const mKey=ts=>{const d=new Date(ts);return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");};
+const TYPE_L={film:"Films",serie:"Séries",anime:"Animes"};
+const norm=s=>s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+const avgOf=a=>a.length?a.reduce((x,[,r])=>x+r.n,0)/a.length:0;
+const f1=v=>v.toFixed(1).replace(".",",");
+const hm=min=>{const h=Math.floor(min/60),m=Math.round(min%60);return h?`${h} h${m?String(m).padStart(2,"0"):""}`:`${m} min`;};
+
+function renderBilan(all){
+  if(!all.length){ $("bilanZone").innerHTML=""; return; }
+  const months=[...new Set(all.map(([,r])=>mKey(r.at)))].sort().reverse();
+  if(!bMonth||!months.includes(bMonth)) bMonth=months[0];
+  const L=all.filter(([,r])=>mKey(r.at)===bMonth);
+  const mins=L.reduce((a,[id,r])=>a+(r.min||T(id).d),0);
+  const top=[...L].sort((a,b)=>b[1].n-a[1].n||b[1].at-a[1].at).slice(0,3);
+  const gs={}; L.forEach(([id,r])=>T(id).g.filter(g=>g!=="animation").forEach(g=>gs[g]=(gs[g]||0)+(r.n-2)));
+  const gTop=Object.entries(gs).sort((a,b)=>b[1]-a[1])[0];
+  const cnt=f=>{const m={};L.forEach(e=>{const k=f(e);m[k]=(m[k]||0)+1;});return Object.entries(m).sort((a,b)=>b[1]-a[1])[0];};
+  const cTop=cnt(([,r])=>r.ctx), pTop=cnt(([id])=>T(id).p);
+  $("bilanZone").innerHTML=`<div class="bilan">
+    <div style="display:flex;flex-direction:column;gap:12px">
+      <div class="row" style="align-items:center;justify-content:space-between"><h3>Bilan · ${MONTH(L[0][1].at)}</h3>
+        <select id="bMonth" aria-label="Mois du bilan">${months.map(k=>`<option value="${k}" ${k===bMonth?"selected":""}>${MONTH(all.find(([,r])=>mKey(r.at)===k)[1].at)}</option>`).join("")}</select></div>
+      <div class="bk">
+        <div><span class="big mono">${L.length}</span><small>titre${L.length>1?"s":""} vu${L.length>1?"s":""}</small></div>
+        <div><span class="big mono">${hm(mins)}</span><small>devant l'écran (estimé)</small></div>
+        <div><span class="big mono">${f1(avgOf(L))}</span><small>note moyenne</small></div>
+      </div>
+      <div class="bline">${gTop&&gTop[1]>0?`Genre du mois : <b>${GENRES[gTop[0]]}</b>. `:""}Moment favori : <b>${CTX[cTop[0]]?.l||"?"}</b>. Plateforme la plus utilisée : <b>${PLATS[pTop[0]].n}</b>.</div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:8px"><div class="label">Ton top du mois</div>
+      <ol class="btop">${top.map(([id,r],i)=>`<li><span class="r">${i+1}</span><span>${esc(T(id).n)}</span>${starStr(r.n)}</li>`).join("")}</ol>
+    </div></div>`;
+}
+function jCard(id,r){
+  const t=T(id);
+  if(jedit&&jedit.id===id){
+    const n=jedit.n;
+    return `<div class="jitem${r.n===5?" fav":""}">
+      <div class="jhead"><b>${esc(t.n)}</b></div>
+      ${starPicker(n,"data-jstar")}
+      <textarea id="jedtxt" placeholder="Ton avis…">${esc(jedit.com||"")}</textarea>
+      <div class="row"><button class="btn primary" data-jsave="1">Enregistrer</button><button class="btn" data-jcancel="1">Annuler</button></div>
+    </div>`;
+  }
+  return `<div class="jitem${r.n===5?" fav":""}">
+    <div class="jhead"><b>${esc(t.n)}</b>${starStr(r.n)}</div>
+    <div class="jmeta">${PLATS[t.p].n} · ${t.t==="film"?"film":t.t==="anime"?"anime":"série"} · vu en mode ${CTX[r.ctx]?.l.toLowerCase()||"?"} · ${dFmt(r.at)}</div>
+    ${r.com?`<div class="jcom">« ${esc(r.com)} »</div>`:""}
+    <div class="jlinks"><button class="jdel" data-jedit="${esc(id)}">Modifier</button><button class="jdel" data-del="${esc(id)}">Supprimer</button></div>
+  </div>`;
+}
+function renderJournal(){
+  const all=Object.entries(S.ratings).filter(([id])=>tIdx(id)>=0);
+  renderBilan(all);
+  $("jcount").textContent=all.length?`${all.length} titre${all.length>1?"s":""} noté${all.length>1?"s":""}`:"";
+  const usedPlats=[...new Set(all.map(([id])=>T(id).p))];
+  $("jplat").innerHTML=`<option value="all">Toutes</option>`+usedPlats.map(p=>`<option value="${p}">${PLATS[p].n}</option>`).join("");
+  if(JU.plat!=="all"&&!usedPlats.includes(JU.plat)) JU.plat="all";
+  $("jstarSel").value=String(JU.star); $("jplat").value=JU.plat; $("jgroupSel").value=JU.group; $("jsort").value=JU.sort; $("jcom").value=JU.com;
+  if(document.activeElement!==$("jq")) $("jq").value=JU.q;
+  if(!all.length){
+    $("jsum").innerHTML="";
+    $("journal").innerHTML=`<div class="empty">Ton journal est vide. Clique sur « Je regarde » sur une suggestion, puis note-la quand tu as fini. Tu peux aussi noter un titre vu ailleurs.</div>`;
+    return;
+  }
+  const avg=avgOf(all), favs=all.filter(([,r])=>r.n===5).length, withCom=all.filter(([,r])=>r.com).length;
+  const by=(keyFn)=>{const m={};all.forEach(e=>{const k=keyFn(e);(m[k]=m[k]||[]).push(e);});return Object.entries(m).map(([k,a])=>[k,avgOf(a),a.length]).sort((a,b)=>b[1]-a[1]||b[2]-a[2]);};
+  const bp=by(([id])=>T(id).p)[0], bc=by(([,r])=>r.ctx)[0];
+  const cnt=[5,4,3,2,1].map(n=>[n,all.filter(([,r])=>r.n===n).length]); const mx=Math.max(...cnt.map(c=>c[1]),1);
+  $("jsum").innerHTML=`<div class="jbox">
+      <div class="label">Depuis le début</div>
+      <div class="kpis">
+        <div><span class="big mono">${f1(avg)}</span><span class="jmeta">note moyenne / 5</span></div>
+        <div><span class="big mono">${favs}</span><span class="jmeta">coup${favs>1?"s":""} de cœur</span></div>
+        <div><span class="big mono">${withCom}</span><span class="jmeta">avec commentaire</span></div>
+      </div>
+      <div class="jmeta" style="font-size:13px;color:var(--ink)">Ta plateforme la mieux notée : <b>${PLATS[bp[0]].n}</b> (${f1(bp[1])}★). Le moment où tu notes le mieux : <b>${CTX[bc[0]]?.l.toLowerCase()||"?"}</b> (${f1(bc[1])}★).</div>
+    </div>
+    <div class="jbox">
+      <div class="label">Répartition des notes · touche une ligne pour filtrer</div>
+      <div class="dist">${cnt.map(([n,c])=>`<button class="drow" data-dstar="${n}" aria-pressed="${JU.star===n}">${starStr(n)}<span class="dbar"><i style="width:${c/mx*100}%"></i></span><span class="mono" style="text-align:right">${c}</span></button>`).join("")}</div>
+    </div>`;
+  const q=norm(JU.q.trim());
+  let items=all.filter(([id,r])=>{
+    const t=T(id);
+    if(JU.plat!=="all"&&t.p!==JU.plat) return false;
+    if(JU.star&&r.n!==JU.star) return false;
+    if(JU.com==="with"&&!r.com) return false;
+    if(JU.com==="without"&&r.com) return false;
+    if(q&&!norm(t.n+" "+(r.com||"")).includes(q)) return false;
+    return true;
+  });
+  const sorters={recent:(a,b)=>b[1].at-a[1].at,old:(a,b)=>a[1].at-b[1].at,best:(a,b)=>b[1].n-a[1].n||b[1].at-a[1].at,worst:(a,b)=>a[1].n-b[1].n||b[1].at-a[1].at,az:(a,b)=>T(a[0]).n.localeCompare(T(b[0]).n,"fr")};
+  items.sort(sorters[JU.sort]);
+  if(!items.length){ $("journal").innerHTML=`<div class="empty">Aucune note ne correspond à ces filtres. <button class="ghost" id="jreset2">Effacer les filtres</button></div>`; return; }
+  const G={note:([,r])=>[6-r.n,TIERS[r.n]],plat:([id])=>{const p=T(id).p;return [Object.keys(PLATS).indexOf(p),PLATS[p].n];},
+    ctx:([,r])=>[Object.keys(CTX).indexOf(r.ctx),CTX[r.ctx]?.l||"Autre"],type:([id])=>{const t=T(id).t;return [["film","serie","anime"].indexOf(t),TYPE_L[t]];},
+    month:([,r])=>{const d=new Date(r.at);return [-(d.getFullYear()*12+d.getMonth()),MONTH(r.at)];},none:()=>[0,""]};
+  const groups=new Map();
+  items.forEach(e=>{const [o,l]=G[JU.group](e); if(!groups.has(l)) groups.set(l,{o,a:[]}); groups.get(l).a.push(e);});
+  $("journal").innerHTML=[...groups.entries()].sort((a,b)=>a[1].o-b[1].o).map(([l,g])=>`<div class="jgroup">
+      ${l?`<div class="jgh"><h3>${esc(l)}</h3><span class="mono">${g.a.length} · moyenne ${f1(avgOf(g.a))}★</span></div>`:""}
+      <div class="jgrid">${g.a.map(([id,r])=>jCard(id,r)).join("")}</div>
+    </div>`).join("");
+}
+
+function renderAll(){ renderPlats(); renderCtx(); renderNow(); renderList(); renderWish(); renderProfile(); renderJournal(); renderVote(); }
+
+/* ---------- événements ---------- */
+const cycle=w=>{const st=triState(w);return st===0?2:st===1?-2:0;};
+function setCtx(k){ const c=CTX[k]; S.ctx=k; S.time=c.time; S.energy=HUMEURS[S.humeur]?.energy??c.energy; S.screen=c.screen; seed=1; progSeed=0;
+  if(k==="famille"&&S.duo.on) S.duo.on=false;
+  if(k==="amoureux"&&!S.duo.on&&Object.values(S.duo.g).some(v=>v)) { S.duo.on=true; toast(`Mode à deux activé avec ${S.duo.name||"ta moitié"}.`); }
+  save(); }
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button"); if(!b) return;
+  const D=b.dataset;
+  if(D.tab){ showTab(D.tab); return; }
+  if(D.set){ openSet(D.set); return; }
+  if(D.res){ openRes.has(D.res)?openRes.delete(D.res):openRes.add(D.res); renderList(); return; }
+  if(D.setclose){ openSet(null); return; }
+  if(D.fage){ const f=S.fam[+D.fage]; f.age=clamp(f.age+(+D.d),0,99); save(); renderCtx(); renderList(); return; }
+  if(D.frm){ S.fam.splice(+D.frm,1); save(); renderCtx(); renderList(); return; }
+  if(D.fpre){ const [n,a]=D.fpre.split("|"); S.fam.push({n,age:+a}); save(); renderCtx(); renderList(); return; }
+  if(b.id==="famAdd"){ const a=parseInt($("famAge").value,10); if(isNaN(a)){ toast("Indique un âge."); $("famAge").focus(); return; } S.fam.push({n:$("famName").value.trim().slice(0,20)||"Membre",age:clamp(a,0,99)}); $("famName").value=""; $("famAge").value=""; save(); renderCtx(); renderList(); return; }
+  if(D.view){ if(D.view==="vote"&&!V) startVote(); showView(D.view); return; }
+  if(D.jv){ showJV(D.jv); return; }
+  if(D.p){ S.plats[D.p]=!S.plats[D.p]; save(); renderPlats(); renderList(); renderWish(); }
+  else if(D.c){ setCtx(D.c); autoNote=""; renderAll(); if(D.c==="famille"&&S.fam.length<=1&&SET!=="fam") openSet("fam"); }
+  else if(D.e!==undefined){ S.energy=+D.e; save(); renderCtx(); renderList(); openSet(null); }
+  else if(D.scr){ S.screen=D.scr; save(); renderCtx(); renderList(); openSet(null); }
+  else if(D.h){ S.humeur=D.h; const h=HUMEURS[D.h]; if(h.energy!==undefined) S.energy=h.energy; save(); renderCtx(); renderList(); openSet(null); }
+  else if(D.g){ S.g[D.g]=cycle(S.g[D.g]||0); S.gSample=false; save(); renderProfile(); renderList(); }
+  else if(D.dg){ S.duo.g[D.dg]=cycle(S.duo.g[D.dg]||0); save(); renderProfile(); if(S.duo.on) renderList(); }
+  else if(D.a){
+    if(D.a==="watch") startWatching(D.id);
+    else if(D.a==="wish"){ if(S.wish[D.id]) delete S.wish[D.id]; else { S.wish[D.id]=Date.now(); toast("Ajouté à « À voir plus tard »."); } save(); renderList(); renderWish(); }
+    else { const t=T(D.id), L=S.ctxL[S.ctx]=S.ctxL[S.ctx]||{}; t.m.forEach(m=>L[m]=clamp((L[m]||0)-.5,-3,3)); later.add(S.ctx+"|"+D.id); S.gSample=false; save(); renderList(); renderProfile(); toast(`OK, moins de ${MOODS[t.m[0]]} en mode ${CTX[S.ctx].l.toLowerCase()}.`); }
+  }
+  else if(D.ep){ const w=S.watching[D.id], d=+D.ep; if(!w) return;
+    if(d>0){ w.eps=(w.eps||0)+1; w.e=(w.e||1)+1; if(w.tot&&w.e>w.tot){ toast(`Saison ${w.s||1} terminée ! On passe à la suivante.`); w.s=(w.s||1)+1; w.e=1; w.tot=null; } }
+    else { if((w.e||1)>1){ w.e--; w.eps=Math.max(0,(w.eps||0)-1); } }
+    save(); renderNow(); renderProg(); }
+  else if(D.season){ const w=S.watching[D.id]; if(!w) return; w.s=(w.s||1)+1; w.e=1; w.tot=null; save(); renderNow(); renderProg(); }
+  else if(D.finish){ draft[D.finish]={...(draft[D.finish]||{}),open:true}; renderNow(); }
+  else if(D.star){ popStar=+D.star; const d=draft[D.id]=draft[D.id]||{open:true}; d.n=+D.star; renderNow(); }
+  else if(D.cancel){ if(draft[D.cancel]) draft[D.cancel].open=false; renderNow(); }
+  else if(D.save){ saveRating(D.save); }
+  else if(D.drop){ delete S.watching[D.drop]; delete draft[D.drop]; save(); renderNow(); renderList(); renderProfile(); toast("Retiré, sans effet sur tes goûts."); }
+  else if(D.del){ const id=D.del, r=S.ratings[id]; if(r){ applyRating(T(id),r.n,r.ctx,-1); delete S.ratings[id]; delete S.seen[id]; save(); renderJournal(); renderList(); renderProfile(); toast("Note supprimée, l'algo l'oublie."); } }
+  else if(D.wwatch){ startWatching(D.wwatch); }
+  else if(D.wrm){ delete S.wish[D.wrm]; save(); renderWish(); renderList(); }
+  else if(D.dstar){ const n=+D.dstar; JU.star=JU.star===n?0:n; showJV("list"); renderJournal(); }
+  else if(D.jedit){ const r=S.ratings[D.jedit]; jedit={id:D.jedit,n:r.n,com:r.com||""}; renderJournal(); }
+  else if(D.jstar&&jedit){ popStar=+D.jstar; jedit.n=+D.jstar; renderJournal(); }
+  else if(D.jcancel){ jedit=null; renderJournal(); }
+  else if(D.jsave&&jedit){ const id=jedit.id, r=S.ratings[id], t=T(id); applyRating(t,r.n,r.ctx,-1); applyRating(t,jedit.n,r.ctx,1); r.n=jedit.n; r.com=(jedit.com||"").trim().slice(0,600); jedit=null; save(); renderJournal(); renderList(); renderProfile(); toast("Note modifiée."); }
+  else if(D.atype){ document.querySelectorAll("#aType button").forEach(x=>x.setAttribute("aria-pressed",x===b)); $("aDur").value=ADEF[D.atype]; $("aDurLab").textContent=D.atype==="film"?"Durée du film (min)":"Durée d'un épisode (min)"; }
+  else if(D.ai){ document.querySelectorAll("#aInt button").forEach(x=>x.setAttribute("aria-pressed",x===b)); }
+  else if(D.ag||D.am){ b.setAttribute("aria-pressed",b.getAttribute("aria-pressed")!=="true"); }
+  else if(D.add){ submitAdd(D.add); }
+  else if(D.vadd){ addVoter(); }
+  else if(D.vrm){ V.names.splice(+D.vrm,1); renderVote(); }
+  else if(D.vstart){ if(V.names.length<2) return; V.step="vote"; V.i=0; V.votes=[]; V.ballot={ok:new Set(),fav:null}; renderVote(); }
+  else if(D.vok){ const s=V.ballot.ok; s.has(D.vok)?s.delete(D.vok):s.add(D.vok); if(!s.has(D.vok)&&V.ballot.fav===D.vok) V.ballot.fav=null; renderVote(); }
+  else if(D.vfav){ V.ballot.fav=V.ballot.fav===D.vfav?null:D.vfav; if(V.ballot.fav) V.ballot.ok.add(D.vfav); renderVote(); }
+  else if(D.vnext){ V.votes.push(V.ballot); V.i++; if(V.i>=V.names.length) V.step="result"; else V.ballot={ok:new Set(),fav:null}; renderVote(); }
+  else if(D.vtie){ const pts=V.cand.map(id=>[id,V.votes.reduce((a,v)=>a+(v.fav===id?2:v.ok.has(id)?1:0),0)]); const mx=Math.max(...pts.map(p=>p[1])); const tied=pts.filter(p=>p[1]===mx); const w=tied[Math.floor(Math.random()*tied.length)][0]; toast(`Le hasard a choisi : ${T(w).n}`); V=null; renderVote(); showView("sugg"); startWatching(w); }
+  else if(D.vwatch){ const id=D.vwatch; V=null; renderVote(); showView("sugg"); startWatching(id); }
+  else if(D.vagain){ startVote(); }
+  else if(D.vclose){ V=null; renderVote(); showView("sugg"); }
+  else switch(b.id){
+    case "shuffle": seed++; renderList(); break;
+    case "progShuffle": progSeed++; renderProg(); break;
+    case "addBtn": openAdd("watch","addZone"); break;
+    case "addBtn2": openAdd("rate","addZone2"); break;
+    case "addClose": closeAdd(); break;
+    case "resume": showTab("series"); break;
+    case "autoBtn": S.auto=!S.auto; if(S.auto){ const now=new Date(); setCtx(autoCtx(now)); autoNote=`${JOURS[now.getDay()]} ${now.getHours()} h ${String(now.getMinutes()).padStart(2,"0")} → <b>${CTX[S.ctx].l}</b>`; } save(); renderAll(); break;
+    case "duoBtn": S.duo.on=!S.duo.on; save(); renderCtx(); renderList(); if(S.duo.on&&!Object.values(S.duo.g).some(v=>v)){ toast("Marque ses goûts dans l'onglet Profil."); showTab("profil"); setTimeout(()=>$("duoPanel").scrollIntoView({block:"start"}),50); } break;
+    case "jreset": case "jreset2": Object.assign(JU,{q:"",plat:"all",com:"all",star:0}); renderJournal(); break;
+    case "resetBtn": $("resetZone").innerHTML=`<div class="confirm">Effacer goûts, notes et listes ? <button id="resetYes">Oui, tout effacer</button><button class="ghost" id="resetNo" style="border-color:var(--line);color:var(--ink)">Annuler</button></div>`; break;
+    case "resetNo": $("resetZone").innerHTML=`<button class="ghost" id="resetBtn">Tout réinitialiser</button>`; break;
+    case "resetYes": { const keep=S.plats; S=DEFAULT(); S.plats=keep; S.g={}; S.gSample=false; later.clear(); save(); buildCatalog(); $("resetZone").innerHTML=`<button class="ghost" id="resetBtn">Tout réinitialiser</button>`; renderAll(); toast("Remis à zéro. Choisis tes genres."); } break;
+  }
+});
+document.addEventListener("input",e=>{
+  const el=e.target;
+  if(el.dataset?.com){ (draft[el.dataset.com]=draft[el.dataset.com]||{}).com=el.value; }
+  else if(el.id==="jedtxt"&&jedit){ jedit.com=el.value; }
+  else if(el.id==="duoName"){ S.duo.name=el.value.trim().slice(0,24); save(); renderCtx(); }
+  else if(el.id==="jq"){ JU.q=el.value; renderJournal(); }
+  else if(el.id==="time"){ S.time=+el.value; $("timeOut").textContent=fmt(S.time); save(); renderList(); renderNow(); renderWish(); $("sv-time").textContent=fmt(S.time); }
+});
+document.addEventListener("change",e=>{
+  const el=e.target;
+  if(el.dataset?.tot){ const w=S.watching[el.dataset.tot]; if(w){ const v=+el.value; w.tot=v>0?Math.round(v):null; save(); renderNow(); } }
+  else if(el.dataset?.dl){ S.dl[el.dataset.dl]=el.checked; save(); renderProg(); }
+  else if(el.id==="jgroupSel"){ JU.group=el.value; saveJU(); renderJournal(); }
+  else if(el.id==="jsort"){ JU.sort=el.value; saveJU(); renderJournal(); }
+  else if(el.id==="jplat"){ JU.plat=el.value; renderJournal(); }
+  else if(el.id==="jcom"){ JU.com=el.value; renderJournal(); }
+  else if(el.id==="jstarSel"){ JU.star=+el.value; renderJournal(); }
+  else if(el.id==="bMonth"){ bMonth=el.value; renderJournal(); }
+});
+
+let TAB="now", VIEW="sugg", JV="list";
+try{ TAB=localStorage.getItem(KEY+".tab")||"now"; }catch(e){}
+const TABS=["now","series","journal","profil"];
+if(TABS.includes(location.hash.slice(1))) TAB=location.hash.slice(1);
+function showTab(t){
+  if(!TABS.includes(t)) t="now"; TAB=t;
+  TABS.forEach(k=>{ $("p-"+k).hidden=k!==t; const b=$("tab-"+k); b.setAttribute("aria-selected",k===t); b.tabIndex=k===t?0:-1; });
+  try{ localStorage.setItem(KEY+".tab",t); }catch(e){}
+  window.scrollTo(0,0);
+}
+function showView(v){ VIEW=v; ["sugg","prog","vote"].forEach(k=>{ $("v-"+k).hidden=k!==v; }); document.querySelectorAll("#viewSeg [data-view]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.view===v)); $("shuffle").hidden=v!=="sugg"; }
+function showJV(v){ JV=v; ["list","bilan","stats"].forEach(k=>{ $("jv-"+k).hidden=k!==v; }); document.querySelectorAll("#jview [data-jv]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.jv===v)); }
+let SET=null;
+function openSet(k){ SET=SET===k?null:k; document.querySelectorAll(".setchip").forEach(b=>b.setAttribute("aria-expanded",b.dataset.set===SET)); ["time","energy","screen","humeur","duo","fam"].forEach(x=>{ $("sp-"+x).hidden=x!==SET; }); }
+document.addEventListener("keydown",e=>{
+  if(e.ctrlKey||e.metaKey||e.altKey||TAB!=="now") return;
+  const tg=e.target; if(tg.closest&&tg.closest("input,textarea,select,[contenteditable]")) return;
+  if(!/^[0-9]$/.test(e.key)) return;
+  const keys=Object.keys(CTX), i=e.key==="0"?9:(+e.key-1); if(!keys[i]) return;
+  setCtx(keys[i]); autoNote=""; renderAll(); toast(`CH ${String(i+1).padStart(2,"0")} · ${CTX[keys[i]].l}`);
+});
+document.querySelector(".tabs").addEventListener("keydown",e=>{ if(e.key!=="ArrowRight"&&e.key!=="ArrowLeft") return; const i=TABS.indexOf(TAB), n=TABS[(i+(e.key==="ArrowRight"?1:3))%4]; showTab(n); $("tab-"+n).focus(); });
+
+buildCatalog();
+save();
+renderAll();
+showTab(TAB); showView("sugg"); showJV("list");
+</script>
+
+<script>
+if("serviceWorker" in navigator){ window.addEventListener("load",()=>{ navigator.serviceWorker.register("sw.js").catch(()=>{}); }); }
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "Zap",
+  "short_name": "Zap",
+  "description": "Quoi regarder maintenant, selon où tu es et tes goûts.",
+  "lang": "fr",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#1F1B1B",
+  "theme_color": "#1F1B1B",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" },
+    { "src": "icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}

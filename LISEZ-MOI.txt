@@ -1,0 +1,17 @@
+ZAP — mettre l'appli en ligne (comme keV-a)
+
+1. Sur github.com, crée un nouveau dépôt public nommé « zap ».
+2. Clique sur « Add file » > « Upload files » et glisse TOUT le contenu de ce dossier :
+   index.html, manifest.webmanifest, sw.js et les 5 images .png.
+   Valide avec « Commit changes ».
+3. Dans le dépôt : Settings > Pages > Source : « Deploy from a branch », branche « main », dossier « / (root) », Save.
+4. Après une ou deux minutes, l'appli est dispo à l'adresse :
+   https://<ton-compte>.github.io/zap/
+5. Sur iPhone : ouvre cette adresse dans Safari > bouton Partager > « Sur l'écran d'accueil ».
+   L'icône Zap apparaît, et l'appli marche aussi hors ligne.
+
+Mettre à jour : remplace simplement les fichiers du dépôt par les nouveaux.
+La nouvelle version s'applique à l'ouverture suivante de l'appli.
+
+À savoir : tes notes, ton journal et tes goûts sont gardés sur chaque téléphone.
+Ceux de la version dans Claude ne sont pas repris dans l'appli installée.
