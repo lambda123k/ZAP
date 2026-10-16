@@ -1,0 +1,18 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844}});
+const errs=[];p.on('pageerror',e=>errs.push(e.stack));
+const W=ms=>p.waitForTimeout(ms);const sh=n=>p.screenshot({path:`t_${n}.png`});
+await p.goto('file://'+process.cwd()+'/le-zappeur.html');await W(300);
+await p.evaluate(()=>{S.me.name="Naim";S.onbDone=1;S.auto=false;S.ctx="potes";save();});await p.reload();await W(400);
+await p.evaluate(()=>{S.ac.on=1;S.ac.f0417=1;S.ac.refuse=15;save();sessionStorage.setItem('zap.safe','1');});await p.reload();await W(500);await p.evaluate(()=>acOpen());await W(600);await sh('open');
+const s=async q=>{await p.fill('#acQ',q);await p.press('#acQ','Enter');await W(350);};
+await s('0417');await s('halden');await sh('f02');await s('puits 7');await sh('f04');await s('exploitant');
+await s('ines calder');await s('11 mars');await sh('f07');await s('ld-22');await s('directeur');await sh('f08b');await s('duval');
+await s('lumen');await W(1200);await sh('lumen');await s('facture');await s('ruiz');
+await p.click('[data-act="board"]');await W(200);
+const ans=async(q,a)=>{await p.click(`[data-acq="${q}"]`);await W(150);await p.click(`[data-acpick="${a}"]`);await W(400);};
+await p.click('[data-acq="q4"]');await p.click('[data-acpick="M. D."]');await W(300);await sh('vague');await p.click('[data-acpick="Marc Delaunay"]');await W(300);
+await ans('q1','Saréna');await ans('q2','Vasquel Énergie');await ans('q3','Lumen Data');await ans('q6','T. Ruiz');await sh('board');await ans('q5','11/03/2026');
+await W(1500);await sh('done');
+console.log(await p.evaluate(()=>JSON.stringify([S.ac.ans,S.ac.exp,Object.keys(S.ac.seen).length,S.ac.done1])));
+console.log('errs',errs);await b.close();})();

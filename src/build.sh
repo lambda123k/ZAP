@@ -1,0 +1,2 @@
+cd "$(dirname "$0")"
+{ cat part1.css part2.css part3.html seg_base.txt; printf "<script>\n\n"; cat auto_live.js; printf '</script>\n<script>\n'; cat part4b_res.js part5_app.js part7_plus.js part7b_friends.js part7c_seeds.js part8f_audio.js part8h_dossier.js part8i_diag.js part8j_regie.js part8k_acte2.js part8l_checkpoints.js part8n_entree.js part8o_actes.js part9_init.js; printf '</script>\n'; } > build_out.html

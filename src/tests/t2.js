@@ -1,0 +1,34 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844},colorScheme:'dark'});
+const errs=[];p.on('pageerror',e=>errs.push(e.stack));
+const W=ms=>p.waitForTimeout(ms);const sh=n=>p.screenshot({path:`a2_${n}.png`});
+await p.goto('file://'+process.cwd()+'/build_out.html');await W(300);
+await p.evaluate(()=>{S.me.name="Naim";S.onbDone=1;S.dev.god=1;save();});await p.reload();await W(400);
+// fin de l'acte I, choix « garder »
+await p.evaluate(()=>{ rgJump("choice"); });await W(800);await p.click('[data-acch="keep"]');await W(800);await sh('end1');
+await p.click('[data-ac="close"]');await W(500);
+await p.evaluate(()=>document.querySelector('#list').scrollIntoView());await W(300);await sh('list0417');
+await p.click('[data-acopen]');await W(900);await sh('hist');
+const s=async q=>{await p.fill('#acQ',q);await p.press('#acQ','Enter');await W(400);};
+await s('console');await sh('c01');
+await p.click('[data-act="con"]');await W(300);
+const cmd=async c=>{await p.fill('#acConI',c);await p.press('#acConI','Enter');await W(250);};
+await cmd('1234');await cmd('09:38');await W(200);await sh('login');
+for(const c of ['aide','qui','regles','planif']) await cmd(c);await sh('planif');
+await cmd('trace 185.62.40.17');await W(900);await sh('trace');
+await cmd('patch');await cmd('journal');await cmd('journal 11/03');await sh('journal');
+await cmd('demander qui es-tu ?');await cmd('demander pourquoi tu plantes au 15e refus');await cmd('demander où est Inès');await cmd('demander c\'est un piège pour qui ?');await sh('ask');
+await cmd('connexion 185.62.40.17');await cmd('connexion 185.62.40.17 --forcer');await W(900);await sh('force');
+await s('maint_0312');await s('badge');await s('canal');await sh('canal');await s('halden-ops');await W(700);
+await p.click('[data-act="board"]');await W(200);
+const ans=async(q,a)=>{await p.click(`[data-acq="${q}"]`);await W(150);await p.click(`[data-acpick="${a}"]`);await W(400);};
+await ans('r1','maint_0312');await ans('r2','185.62.40.17');await p.click('[data-acq="r3"]');await p.click('[data-acpick="Lumen Data"]');await W(300);await sh('r3no');await p.click('[data-acpick="HALDEN-OPS"]');await W(300);
+await ans('r4','HALDEN-OPS');
+const ty=async(q,v)=>{await p.click(`[data-acq="${q}"]`);await W(150);await p.fill(`[data-acty="${q}"] input`,v);await p.press(`[data-acty="${q}"] input`,'Enter');await W(400);};
+await ty('r6','vivante');await sh('board');await ty('r5','Piège');await W(1600);await sh('complete');
+await p.click('[data-acch2="mire"]');await W(600);await sh('end2');
+console.log(await p.evaluate(()=>JSON.stringify([S.ac.a2.ans,S.ac.exp,S.ac.a2.end,S.ac.a2.choice,Object.keys(S.ac.a2.seen).length])));
+await p.click('[data-ac="close"]');await W(300);await p.evaluate(()=>document.querySelector('#list').scrollIntoView());await W(200);await sh('listafter');
+for(const j of ['a2publish','a2ines','a2zero']){ await p.evaluate(j=>rgJump(j),j); await W(800); await sh('j_'+j); }
+await p.evaluate(()=>{showTab("potes");});await W(300);await sh('potes_publish_check');
+console.log('errs',errs);await b.close();})();

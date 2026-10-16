@@ -1,0 +1,25 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844},colorScheme:'dark'});
+const errs=[];p.on('pageerror',e=>errs.push(e.stack));const W=ms=>p.waitForTimeout(ms);const sh=n=>p.screenshot({path:`p_${n}.png`});
+await p.goto('file://'+process.cwd()+'/build_out.html');await W(300);
+await p.evaluate(()=>{S.me.name="Naim";S.onbDone=1;save();});await p.reload();await W(400);
+await p.evaluate(()=>{rgJump("rep1");});await W(500);
+const cd=async d=>{await p.click(`[data-dgcd="${d}"]`);await W(150);};const up=async()=>{await p.click('[data-dgup="0"]');await W(150);};
+const file=async n=>{await p.locator('.dgrow.file',{hasText:n}).click();await W(200);};
+await cd('/cache');await file('recos_tmp');await p.click('[data-dgact]');await W(1700);
+await up();await cd('/modeles');await file('gouts_v12.bin');await p.click('[data-dgact]');await W(1700);
+await up();await cd('/systeme');await file('noyau');await p.click('[data-dgact]');await W(1700);
+await p.click('[data-dgreboot]');await W(6000);await W(6500);await sh('p2sym');await W(4000);await sh('p2alert');
+await p.click('#acReDiag');await W(400);await sh('p2guide');
+await up();await cd('/systeme');await file('usine');await up();await cd('/modeles');await file('gouts_v12.cfg');await sh('cal');
+const setR=async(k,v)=>{await p.evaluate(([k,v])=>{const i=document.querySelector(`[data-cal="${k}"]`);i.value=v;i.dispatchEvent(new Event('input',{bubbles:true}));},[k,v]);};
+await setR('genres',.5);await setR('ambiance',.3);await setR('duree',.2);await p.click('[data-dgcal]');await W(300);await sh('calko');
+await setR('refus',0);await p.click('[data-dgcal]');await W(5000);await W(6500);await W(4000);await sh('p3alert');
+await p.click('#acReDiag');await W(400);await up();await cd('/logs');await file('horloge');await sh('ord');
+await p.click('[data-dgord="tâche maint_0312 : réinstallation"]');await W(200);
+for(const x of ["alimentation : MIRE se réveille","lecture de la configuration du noyau","chargement du modèle de goûts","chargement des règles","calcul des premières recommandations","envoi des recommandations aux abonnés"]){ await p.click(`[data-dgord="${x}"]`);await W(150);}
+await W(4500);await sh('p4guide');
+await p.click('[data-dghid]');await W(150);await cd('/regles');await cd('/regles/.externe');await sh('del');await p.click('[data-dgdel]');await W(500);await sh('deleted');await W(3500);await sh('back');
+await cd('/regles/.externe');await p.click('[data-dgcd="/regles/.externe/0417"]');await W(5600);await sh('end1');await W(3000);await sh('act2');await W(3000);
+console.log(await p.evaluate(()=>JSON.stringify([S.ac.pn,S.ac.cal,S.ac.clk,S.ac.del,S.ac.f0417,!document.getElementById('acOv').hidden,Object.keys(S.ac.cp||{})])));
+console.log('errs',errs);await b.close();})();

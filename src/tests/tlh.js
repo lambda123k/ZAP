@@ -1,0 +1,13 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844},colorScheme:'dark'});
+const errs=[];p.on('pageerror',e=>errs.push(e.stack));const W=ms=>p.waitForTimeout(ms);
+await p.goto('file://'+process.cwd()+'/build_out.html');await W(300);
+await p.evaluate(()=>{S.me.name="Naim";S.onbDone=1;save();});await p.reload();await W(400);
+const bb=await (await p.$('.wrap>.mire')).boundingBox();
+const lp=async()=>{await p.mouse.move(bb.x+60,bb.y+3);await p.mouse.down();await W(1300);await p.mouse.up();await W(200);return p.evaluate(()=>[document.querySelector('.enthint')?.textContent,!document.getElementById('rgOv').hidden,S.ac.ent?.sig]);};
+console.log(await lp());await p.screenshot({path:'lh.png'});
+for(let i=0;i<3;i++){await p.mouse.click(bb.x+60,bb.y+3);await W(120);} await W(4200);
+console.log(await lp());
+await p.evaluate(()=>{S.ac.ent.ghost=1;S.ac.refuse=6;save();});await W(4200);console.log(await lp());
+await p.evaluate(()=>{S.dev.unl=1;save();});await W(4200);console.log(await lp());
+console.log('errs',errs);await b.close();})();

@@ -1,0 +1,12 @@
+const {chromium}=require('playwright');
+(async()=>{const b=await chromium.launch();const p=await b.newPage({viewport:{width:390,height:844},colorScheme:'dark'});
+const errs=[];p.on('pageerror',e=>errs.push(e.stack));const W=ms=>p.waitForTimeout(ms);
+await p.goto('file://'+process.cwd()+'/build_out.html');await W(300);
+await p.evaluate(()=>{S.me.name="Naim";S.onbDone=1;save();});await p.reload();await W(400);
+const lp=async()=>{const bb=await (await p.$('.wrap>.mire')).boundingBox();await p.mouse.move(bb.x+50,bb.y+3);await p.mouse.down();await W(1400);await p.mouse.up();await W(300);return p.evaluate(()=>!document.getElementById('rgOv').hidden);};
+console.log('locked longpress opens?',await lp());
+await p.click('#searchBtn');await W(200);await p.fill('#sq','regie');await W(100);console.log('partial opens?',await p.evaluate(()=>!document.getElementById('rgOv').hidden));
+await p.fill('#sq','Regie.0417');await W(300);console.log('code opens?',await p.evaluate(()=>!document.getElementById('rgOv').hidden));
+await p.click('[data-rg="close"]');await W(200);console.log('unlocked longpress?',await lp());
+await p.click('[data-rglock]');await W(200);console.log('relocked longpress?',await lp());
+console.log('errs',errs);await b.close();})();
